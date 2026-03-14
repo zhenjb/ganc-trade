@@ -9,7 +9,9 @@ git clone https://github.com/zjqingzun/scyl-Ganc.git
 cd scyl-Ganc
 ```
 
-### Check Environment & Package (Go, Ignite, Rustup, Circom 2)
+<details>
+  <summary>Check Environment & Package (Go, Ignite, Rustup, Circom 2)</summary>
+
 ```bash
 # go
 go version
@@ -41,28 +43,58 @@ circom --version
 
 circom --help
 ```
+</details>
+
+### Ganc Setup 
+```bash
+chmod +x exe.sh
+./exe.sh
+```
 
 ### Run Chain
 ```bash
-cd sw/ob
-ignite chain serve -r
+ganc chain
 ```
 
-#### Run Node (Ob Node)
+<details>
+  <summary>Run Node (Ob Node) - Ganc v0.0.x</summary>
+
 ***Mandatory:*** 
 *The prerequisite is that the chain must be running first.*
 ```bash
 # Open a new terminal
-cd sw/ob
-obd tx dex --help
+ganc test -obs node@tx
 ```
+</details>
 
-#### Test Matching Orderbook
+### Ganc v0.1.0
+<details>
+  <summary>Test Matching Orderbook</summary>
+
+***Mandatory:*** 
+*The prerequisite is that the chain must be running first.* <br>
 ```bash
 # Open a new terminal 
-cd sw/sh-scyl/test/
-bash order-matching@10S10B-empty-sort.sh
+ganc test -ob matching@06S06B
 ```
+or 
+```bash
+# Open a new terminal 
+ganc test -ob matching@10S10B
+```
+The order was perfectly matched.
+</details>
+
+<details>
+    <summary>Check Escrow and Selfement</summary>
+
+***Mandatory:*** 
+*The prerequisite is that the chain must be running first.* 
+```bash
+# Open a new terminal
+ganc test -ob matching@balance
+```
+</details>
 
 
 ## ©️ Terms and Privacy Policy

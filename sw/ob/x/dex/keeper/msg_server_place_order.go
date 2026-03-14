@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"ob/x/dex/types"
-
+	"cosmossdk.io/math"
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -13,9 +13,15 @@ import (
 
 func (k msgServer) PlaceOrder(goCtx context.Context, msg *types.MsgPlaceOrder) (*types.MsgPlaceOrderResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	_, err := k.Keeper.Market.Get(ctx, msg.MarketId)
+
+	market, err := k.Keeper.Market.Get(ctx, msg.MarketId)
 	if err != nil {
 		return nil, errorsmod.Wrapf(sdkerrors.ErrKeyNotFound, "market %s not found", msg.MarketId)
+	}
+
+	quantity, ok := math.NewIntFromString(msg.Quantity)
+	if !ok {
+		return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "invalid quantity format")
 	}
 
 	orderType := "LIMIT"
@@ -23,42 +29,40 @@ func (k msgServer) PlaceOrder(goCtx context.Context, msg *types.MsgPlaceOrder) (
 		orderType = "MARKET"
 	}
 
-	orderId := fmt.Sprintf("%s-%d", msg.MarketId, ctx.BlockHeight())
-	order := types.Order{
-		MarketId:      msg.MarketId,
-		OrderType:     orderType,
-		Side:          msg.Side,
-		Price:         msg.Price,
-		Quantity:      msg.Quantity,
-		Remaining:     msg.Quantity,
-		CreatedAt:     fmt.Sprintf("%d", ctx.BlockTime().Unix()),
-		CreatedHeight: fmt.Sprintf("%d", ctx.BlockHeight()),
-		Status:        "OPEN",
-		Creator:       msg.Creator,
+	creatorAddr, _ := sdk.AccAddressFromBech32(msg.Creator)
+	var escrowCoins sdk.Coins
+
+	if msg.Side == "BUY" {
+		price, _ := math.NewIntFromString(msg.Price)
+		if orderType == "MARKET" {
+			escrowCoins = sdk.NewCoins(sdk.NewCoin(market.QuoteDenom, price)) 
+		} else {
+			escrowCoins = sdk.NewCoins(sdk.NewCoin(market.QuoteDenom, price.Mul(quantity)))
+		}
+	} else {
+		escrowCoins = sdk.NewCoins(sdk.NewCoin(market.BaseDenom, quantity))
 	}
 
-	// Save via Keeper's Collections API
-	if err := k.Keeper.Order.Set(ctx, orderId, order); err != nil {
+	// Escrow Logic 
+	if err := k.bankKeeper.SendCoinsFromAccountToModule(ctx, creatorAddr, types.ModuleName, escrowCoins); err != nil {
 		return nil, err
 	}
 
-	// Create a composite key to automatically sort by: marketId | price | orderId
-	if orderType == "LIMIT" {
-		orderbookKey := fmt.Sprintf("%s|%s|%s", msg.MarketId, msg.Price, orderId)
-		err = k.Keeper.Orderbook.Set(ctx, orderbookKey, types.Orderbook{
-			MarketId: msg.MarketId,
-			Side:     msg.Side,
-			Price:    msg.Price,
-			OrderId:  orderId,
-		})
-		if err != nil {
-			return nil, err
-		}
+	// Order Init
+	orderId := fmt.Sprintf("%s-%d-%s", msg.MarketId, ctx.BlockHeight(), msg.Creator[:6])
+	newOrder := types.Order{
+		MarketId:  msg.MarketId,
+		OrderType: orderType,
+		Side:      msg.Side,
+		Price:     msg.Price,
+		Quantity:  msg.Quantity,
+		Remaining: msg.Quantity,
+		Status:    "OPEN",
+		Creator:   msg.Creator,
 	}
 
-	// ********** Matching Order **********
-	err = k.Keeper.MatchOrders(ctx, &order, orderId)
-	if err != nil {
+	// Call MatchOrders from Keeper
+	if err := k.Keeper.MatchOrders(ctx, &newOrder, orderId, market); err != nil {
 		return nil, err
 	}
 
