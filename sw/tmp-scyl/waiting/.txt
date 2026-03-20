@@ -1,5 +1,0 @@
-x/dex/keeper/msg_server_register_pairs.go                   yes
-x/dex/keeper/msg_server_place_order.go                      yes
-x/dex/keeper/query_orderbook.go                             yes
-x/dex/keeper/matching.go                                    yes
-proto/dex/v1/query.proto                                    yes

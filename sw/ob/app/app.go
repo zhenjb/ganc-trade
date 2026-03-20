@@ -46,6 +46,7 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
 	"ob/docs"
+	backendmodulekeeper "ob/x/backend/keeper"
 	dexmodulekeeper "ob/x/dex/keeper"
 	obmodulekeeper "ob/x/ob/keeper"
 	zproofsmodulekeeper "ob/x/zproofs/keeper"
@@ -105,6 +106,7 @@ type App struct {
 	ObKeeper      obmodulekeeper.Keeper
 	DexKeeper     dexmodulekeeper.Keeper
 	ZproofsKeeper zproofsmodulekeeper.Keeper
+	BackendKeeper backendmodulekeeper.Keeper
 }
 
 func init() {
@@ -187,6 +189,7 @@ func New(
 		&app.ObKeeper,
 		&app.DexKeeper,
 		&app.ZproofsKeeper,
+		&app.BackendKeeper,
 	); err != nil {
 		panic(err)
 	}

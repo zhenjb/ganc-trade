@@ -5,8 +5,9 @@ import (
 	"fmt"
 
 	"ob/x/dex/types"
-	"cosmossdk.io/math"
+
 	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
@@ -35,7 +36,7 @@ func (k msgServer) PlaceOrder(goCtx context.Context, msg *types.MsgPlaceOrder) (
 	if msg.Side == "BUY" {
 		price, _ := math.NewIntFromString(msg.Price)
 		if orderType == "MARKET" {
-			escrowCoins = sdk.NewCoins(sdk.NewCoin(market.QuoteDenom, price)) 
+			escrowCoins = sdk.NewCoins(sdk.NewCoin(market.QuoteDenom, price))
 		} else {
 			escrowCoins = sdk.NewCoins(sdk.NewCoin(market.QuoteDenom, price.Mul(quantity)))
 		}
@@ -43,7 +44,7 @@ func (k msgServer) PlaceOrder(goCtx context.Context, msg *types.MsgPlaceOrder) (
 		escrowCoins = sdk.NewCoins(sdk.NewCoin(market.BaseDenom, quantity))
 	}
 
-	// Escrow Logic 
+	// Escrow Logic
 	if err := k.bankKeeper.SendCoinsFromAccountToModule(ctx, creatorAddr, types.ModuleName, escrowCoins); err != nil {
 		return nil, err
 	}

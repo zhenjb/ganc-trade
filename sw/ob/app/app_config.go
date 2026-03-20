@@ -1,6 +1,8 @@
 package app
 
 import (
+	_ "ob/x/backend/module"
+	backendmoduletypes "ob/x/backend/types"
 	_ "ob/x/dex/module"
 	dexmoduletypes "ob/x/dex/types"
 	_ "ob/x/ob/module"
@@ -87,7 +89,7 @@ var (
 		{Account: nft.ModuleName},
 		{Account: ibctransfertypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner}},
 		{Account: icatypes.ModuleName},
-		{Account: dexmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}}, {Account: zproofsmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}}}
+		{Account: dexmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}}, {Account: zproofsmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}}, {Account: backendmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}}}
 
 	// blocked account addresses
 	blockAccAddrs = []string{
@@ -132,6 +134,7 @@ var (
 						obmoduletypes.ModuleName,
 						dexmoduletypes.ModuleName,
 						zproofsmoduletypes.ModuleName,
+						backendmoduletypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/beginBlockers
 					},
 					EndBlockers: []string{
@@ -143,6 +146,7 @@ var (
 						obmoduletypes.ModuleName,
 						dexmoduletypes.ModuleName,
 						zproofsmoduletypes.ModuleName,
+						backendmoduletypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/endBlockers
 					},
 					// The following is mostly only needed when ModuleName != StoreKey name.
@@ -182,6 +186,7 @@ var (
 						obmoduletypes.ModuleName,
 						dexmoduletypes.ModuleName,
 						zproofsmoduletypes.ModuleName,
+						backendmoduletypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/initGenesis
 					},
 				}),
@@ -289,6 +294,10 @@ var (
 			{
 				Name:   zproofsmoduletypes.ModuleName,
 				Config: appconfig.WrapAny(&zproofsmoduletypes.Module{}),
+			},
+			{
+				Name:   backendmoduletypes.ModuleName,
+				Config: appconfig.WrapAny(&backendmoduletypes.Module{}),
 			},
 			// this line is used by starport scaffolding # stargate/app/moduleConfig
 		},

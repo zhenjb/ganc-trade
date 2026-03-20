@@ -63,8 +63,12 @@ func (k Keeper) MatchOrders(ctx sdk.Context, takerOrder *types.Order, takerId st
 			if takerOrder.OrderType == "LIMIT" {
 				tPrice, _ := math.NewIntFromString(takerOrder.Price)
 				mPrice, _ := math.NewIntFromString(val.Price)
-				if takerOrder.Side == "BUY" && mPrice.GT(tPrice) { continue }
-				if takerOrder.Side == "SELL" && mPrice.LT(tPrice) { continue }
+				if takerOrder.Side == "BUY" && mPrice.GT(tPrice) {
+					continue
+				}
+				if takerOrder.Side == "SELL" && mPrice.LT(tPrice) {
+					continue
+				}
 			}
 			candidates = append(candidates, val)
 		}
@@ -73,7 +77,9 @@ func (k Keeper) MatchOrders(ctx sdk.Context, takerOrder *types.Order, takerId st
 	sort.Slice(candidates, func(i, j int) bool {
 		pi, _ := math.NewIntFromString(candidates[i].Price)
 		pj, _ := math.NewIntFromString(candidates[j].Price)
-		if targetSide == "BUY" { return pi.GT(pj) }
+		if targetSide == "BUY" {
+			return pi.GT(pj)
+		}
 		return pi.LT(pj)
 	})
 
@@ -82,7 +88,9 @@ func (k Keeper) MatchOrders(ctx sdk.Context, takerOrder *types.Order, takerId st
 
 	// 2. Execution Loop
 	for _, entry := range candidates {
-		if takerRemaining.IsZero() { break }
+		if takerRemaining.IsZero() {
+			break
+		}
 
 		makerOrder, _ := k.Order.Get(ctx, entry.OrderId)
 		makerRemaining, _ := math.NewIntFromString(makerOrder.Remaining)

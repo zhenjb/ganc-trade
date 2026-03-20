@@ -1,0 +1,33 @@
+$ ignite scaffold module backend --dep auth --dep bank
+
+modify app/app.go
+modify app/app_config.go
+create proto/ob/backend/module/v1/module.proto
+create proto/ob/backend/v1/genesis.proto
+create proto/ob/backend/v1/params.proto
+create proto/ob/backend/v1/query.proto
+create proto/ob/backend/v1/tx.proto
+create x/backend/keeper/genesis.go
+create x/backend/keeper/genesis_test.go
+create x/backend/keeper/keeper.go
+create x/backend/keeper/keeper_test.go
+create x/backend/keeper/msg_server.go
+create x/backend/keeper/msg_update_params.go
+create x/backend/keeper/msg_update_params_test.go
+create x/backend/keeper/query.go
+create x/backend/keeper/query_params.go
+create x/backend/keeper/query_params_test.go
+create x/backend/module/autocli.go
+create x/backend/module/depinject.go
+create x/backend/module/module.go
+create x/backend/module/simulation.go
+create x/backend/types/codec.go
+create x/backend/types/errors.go
+create x/backend/types/expected_keepers.go
+create x/backend/types/genesis.go
+create x/backend/types/genesis_test.go
+create x/backend/types/keys.go
+create x/backend/types/params.go
+create x/backend/types/types.go
+
+🎉 Module created backend.
