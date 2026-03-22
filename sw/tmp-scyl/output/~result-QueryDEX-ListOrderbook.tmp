@@ -1,8 +1,0 @@
-$ obd q dex list-orderbook
-orderbook:
-- market_id: ATOM-USDT
-  order_id: ATOM-USDT-1033
-  price: "10"
-  side: BUY
-pagination:
-  total: "1"
