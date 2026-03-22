@@ -1,9 +1,0 @@
-$ obd q dex list-market
-market:
-- base_denom: ATOM
-  lot_size: "1"
-  quote_denom: USDT
-  status: ACTIVE
-  tick_size: "0.01"
-pagination:
-  total: "1"

@@ -135,9 +135,3 @@ ganc setup
 ganc help
 # or ganc -h
 ```
-
-
-## ©️ License
-Copyright © 2026 zjDSPF <br>
-<img src="public/icon/zjDSPF.png" alt="zjDSPF" width="150" height="150"> <br>
-
