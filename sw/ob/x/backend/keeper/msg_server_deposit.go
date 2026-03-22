@@ -10,7 +10,6 @@ import (
 )
 
 func (k msgServer) Deposit(goCtx context.Context, msg *types.MsgDeposit) (*types.MsgDepositResponse, error) {
-	// Unwrap context từ Go Context sang sdk.Context.
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	if msg == nil {
@@ -26,13 +25,13 @@ func (k msgServer) Deposit(goCtx context.Context, msg *types.MsgDeposit) (*types
 		return nil, errorsmod.Wrap(errors.New("deposit amount must be > 0"), "invalid deposit")
 	}
 
-	// Chuyển đổi address string -> sdk.AccAddress.
+	// Convert the address string to sdk.AccAddress.
 	depositor, err := sdk.AccAddressFromBech32(msg.Creator)
 	if err != nil {
 		return nil, errorsmod.Wrap(err, "invalid creator address")
 	}
 
-	// Chuyển token vào Module Account (lock onchain cho "backend").
+	// Transfer tokens to the Account Module (on-chain lock for the "backend").
 	err = k.bankKeeper.SendCoinsFromAccountToModule(
 		ctx,
 		depositor,
@@ -43,7 +42,7 @@ func (k msgServer) Deposit(goCtx context.Context, msg *types.MsgDeposit) (*types
 		return nil, err
 	}
 
-	// Emit event để offchain có thể index/matching sau này.
+	// Emit events so that off-chain indexing/matching can be done later.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"backend_deposit",

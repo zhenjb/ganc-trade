@@ -68,6 +68,7 @@ ganc test -obs node@tx
 </details>
 
 ### Ganc v0.1.0
+#### -ob
 <details>
   <summary>Test Matching Orderbook</summary>
 
@@ -96,6 +97,17 @@ ganc test -ob matching@balance
 ```
 </details>
 
+#### -obs
+<details>
+    <summary>Deposit Token</summary>
+
+***Mandatory:*** 
+*The prerequisite is that the chain must be running first.* 
+```bash
+# Open a new terminal
+ganc test -obs smartc@deposit
+```
+</details>
 
 ## ©️ Terms and Privacy Policy
 We hereby notify you that your use of or involvement with this project constitutes your acceptance of the following Terms and Privacy Policy: <br>
