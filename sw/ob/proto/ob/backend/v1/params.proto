@@ -1,0 +1,13 @@
+syntax = "proto3";
+package ob.backend.v1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "ob/x/backend/types";
+
+// Params defines the parameters for the module.
+message Params {
+  option (amino.name) = "ob/x/backend/Params";
+  option (gogoproto.equal) = true;
+}

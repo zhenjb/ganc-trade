@@ -28,7 +28,7 @@
 </div>
 
 ![Ignite CLI](./assets/ignite-cli.png)
-
+ 
 [Ignite CLI](https://ignite.com/cli) is the all-in-one platform to build,
 launch, and maintain any crypto application on a sovereign and secured
 blockchain. It is a developer-friendly interface to the [Cosmos

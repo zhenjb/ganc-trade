@@ -5,6 +5,7 @@ SCRIPT_DIR="$HOME/scripts"
 GANC_BIN="$SCRIPT_DIR/ganc"
 COMPLETION_FILE="$SCRIPT_DIR/ganc_completion"
 BASHRC="$HOME/.bashrc"
+VERSION_APP=$(jq -r '.version' version.json)
 
 # Color codes
 GREEN='\033[0;32m'
@@ -13,7 +14,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}[SETUP]     Installing Ganc v0.1.0 ...${NC}"
+echo -e "${YELLOW}[SETUP]        Installing Ganc v0.1.0 ...${NC}"
 
 # 1. Create directory
 mkdir -p "$SCRIPT_DIR"
@@ -45,7 +46,7 @@ case "$COMMAND" in
                 -obs)
                     DIR_PATH="$DIR_PATH/obs"
                     shift ;;
-                matching*|list*|market*|node*)
+                matching*|list*|market*|node*|smartc*)
                     FILE_NAME="${1#--}.sh"
                     shift ;;
                 -help)
@@ -53,7 +54,7 @@ case "$COMMAND" in
                     echo -e "   ganc test -[flags] [args]"
                     echo -e "${Y}FLAGS${NC}"
                     echo -e "   -ob         Route to test/order (uses matching@...)"
-                    echo -e "   -obs        Route to test/obs   (uses list@..., market@..., node@...)"
+                    echo -e "   -obs        Route to test/obs   (uses list@..., market@..., node@..., smartc@...)"
                     exit 0 ;;
                 *)
                     ARGS+="$1 "
@@ -64,10 +65,10 @@ case "$COMMAND" in
         FULL_PATH="$DIR_PATH/$FILE_NAME"
 
         if [[ -f "$FULL_PATH" ]]; then
-            echo -e "${G}[GANC]     Executing: bash $FULL_PATH $ARGS${NC}"
+            echo -e "${G}[GANC]         Executing: bash $FULL_PATH $ARGS${NC}"
             bash "$FULL_PATH" $ARGS
         else
-            echo -e "${R}[GANC]     Error: Program not found at $FULL_PATH${NC}"
+            echo -e "${R}[GANC]         Error: Program not found at $FULL_PATH${NC}"
             exit 1
         fi
         ;;
@@ -75,15 +76,21 @@ case "$COMMAND" in
     chain)
         if [ -d "sw/ob" ]; then
             cd sw/ob
-            echo -e "${G}[GANC]     Starting Ignite Chain...${NC}"
+            echo -e "${G}[GANC]         Starting Ignite Chain...${NC}"
             ignite chain serve --reset-once
         else
-            echo -e "${R}[GANC]     Error: Directory sw/ob not found.${NC}"
+            echo -e "${R}[GANC]         Error: Directory sw/ob not found.${NC}"
         fi
         ;;
 
     -v|version)
-        echo -e "${Y}Ganc CLI v0.1.0${NC}"
+        VERSION=$(jq -r '.version' version.json)
+        echo -e "${Y}Ganc CLI v.$VERSION${NC}"
+        ;;
+
+    -z|setup)
+        echo -e "${G}[GANC]         Updating settings ...${NC}"
+        bash exe.sh
         ;;
 
     -h|help)
@@ -92,8 +99,9 @@ case "$COMMAND" in
         echo -e "${Y}COMMAND${NC}"
         echo -e "   test [flags] [args]      Program testing (use -ob or -obs)"
         echo -e "   chain                    Start ignite chain serve"
-        echo -e "   version                  Print version info"
-        echo -e "   help                     Show this help"
+        echo -e "   version (-v)             Print version info"
+        echo -e "   setup (-z)               Updating settings"
+        echo -e "   help (-h)                Show this help"
         ;;
     
     *)
@@ -147,4 +155,4 @@ if ! grep -q "$SCRIPT_DIR" "$BASHRC"; then
     echo "source $COMPLETION_FILE" >> "$BASHRC"
 fi
 
-echo -e "${GREEN}[YES]       Ganc v0.1.0 installation successful!${NC}"
+echo -e "${GREEN}[GANC]         Ganc v$VERSION_APP installation successful!${NC}"
