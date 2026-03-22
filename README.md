@@ -45,12 +45,6 @@ circom --help
 ```
 </details>
 
-### Ganc Setup 
-```bash
-chmod +x exe.sh
-./exe.sh
-```
-
 ### Run Chain
 ```bash
 ganc chain
@@ -117,12 +111,30 @@ We hereby notify you that your use of or involvement with this project constitut
 - ___Contributions of Applied Products:__ We acknowledge the significant contributions of the various tools and libraries utilized in this project._ <br>
 
 
-## ©️ Contribution 
+## ©️ Contributing
 *(update)*
 
 
 ## ©️ Security
 *(update)*
+
+
+## ©️ Settings
+### Setup
+```bash
+chmod +x exe.sh
+./exe.sh
+```
+### Update 
+```bash
+ganc setup
+# or ganc -z
+```
+### Help
+```bash
+ganc help
+# or ganc -h
+```
 
 
 ## ©️ License
