@@ -21,6 +21,9 @@ service Msg {
 
   // Deposit defines the Deposit RPC.
   rpc Deposit(MsgDeposit) returns (MsgDepositResponse);
+
+  // Withdraw defines the Withdraw RPC.
+  rpc Withdraw(MsgWithdraw) returns (MsgWithdrawResponse);
 }
 
 // MsgUpdateParams is the Msg/UpdateParams request type.
@@ -53,3 +56,13 @@ message MsgDeposit {
 
 // MsgDepositResponse defines the MsgDepositResponse message.
 message MsgDepositResponse {}
+
+// MsgWithdraw defines the MsgWithdraw message.
+message MsgWithdraw {
+  option (cosmos.msg.v1.signer) = "creator";
+  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  cosmos.base.v1beta1.Coin amount = 2 [(gogoproto.nullable) = false];
+}
+
+// MsgWithdrawResponse defines the MsgWithdrawResponse message.
+message MsgWithdrawResponse {}
