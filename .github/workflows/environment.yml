@@ -28,11 +28,9 @@ jobs:
       - name: Install Ignite CLI
         run: |
           curl https://get.ignite.com/cli! | bash
-          # Ensure ignite is available globally
           if [ -f ignite ]; then sudo mv ignite /usr/local/bin/; fi
 
       # --- RUST & CARGO SECTION ---
-      # Following your specific instructions for Rustup
       - name: Install Rustup and Cargo
         run: |
           curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
@@ -40,7 +38,6 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       # --- CIRCOM 2 SECTION ---
-      # Caching prevents rebuilding Circom (saves ~5 minutes per run)
       - name: Cache Circom Binary
         id: cache-circom
         uses: actions/cache@v3
@@ -51,8 +48,10 @@ jobs:
       - name: Build and Install Circom 2
         if: steps.cache-circom.outputs.cache-hit != 'true'
         run: |
-          git clone https://github.com/iden3/circom.git
-          cd circom
+          # Remove directory if it exists to avoid "already exists" error
+          rm -rf circom-build 
+          git clone https://github.com/iden3/circom.git circom-build
+          cd circom-build
           cargo build --release
           cargo install --path circom
 
