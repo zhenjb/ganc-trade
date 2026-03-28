@@ -8,42 +8,59 @@ on:
   workflow_dispatch:
 
 jobs:
-  ganc-chain:
+  run-ganc-process:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 1. Restore Cached Binaries (Go, Ignite, Circom)
-      # This avoids re-downloading/re-building everything
-      - name: Restore Tools Cache
-        id: cache-tools
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            /usr/local/bin/ignite
-          key: ${{ runner.os }}-ganc-env-v1
-
-      # 2. Setup Go (Required to run the chain, but fast)
-      - name: Setup Go
+      # --- 1. PREREQUISITE: GO & IGNITE ---
+      - name: Setup Go Environment
         uses: actions/setup-go@v5
         with:
           go-version: 'stable'
-          cache: true # Caches go modules automatically
 
-      # 3. Ensure Paths are set
-      - name: Configure Environment Paths
+      - name: Install Ignite CLI
         run: |
+          curl https://get.ignite.com/cli! | bash
+          if [ -f ignite ]; then sudo mv ignite /usr/local/bin/; fi
+
+      # --- 2. PREREQUISITE: RUST & CARGO ---
+      - name: Install Rustup
+        run: |
+          curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
+          source "$HOME/.cargo/env"
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          # If Ignite was cached in a custom path, add it here
 
-      # 4. Execute Ganc Setup and Chain
-      - name: Run Ganc Setup
+      # --- 3. PREREQUISITE: CIRCOM 2 (CACHED) ---
+      - name: Cache Circom Binary
+        id: cache-circom
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/circom
+          key: ${{ runner.os }}-circom-v2
+
+      - name: Build Circom 2
+        if: steps.cache-circom.outputs.cache-hit != 'true'
         run: |
-          echo "Executing Setup Script..."
+          rm -rf circom-build
+          git clone https://github.com/iden3/circom.git circom-build
+          cd circom-build
+          cargo build --release
+          cargo install --path circom
+
+      # --- 4. EXECUTE GANC CHAIN PROCESS ---
+      - name: Run Ganc Setup and Chain
+        run: |
+          echo "Initializing Ganc Environment..."
+          
+          # Grant execution permissions to your setup script
           chmod +x exe.sh
+          
+          # Execute the setup script
           ./exe.sh
           
+          # Run the Ganc chain command
+          # Note: Ensure 'ganc' is in your PATH or called via its relative path
           ganc chain
