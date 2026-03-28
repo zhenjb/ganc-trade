@@ -1,0 +1,75 @@
+name: Setup and Verify Environment
+
+on:
+  push:
+    branches: 
+      - main
+      - appreciate
+  pull_request:
+    branches: 
+      - main
+      - appreciate
+  workflow_dispatch:
+
+jobs:
+  environment-setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # --- GO & IGNITE SECTION ---
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Install Ignite CLI
+        run: |
+          curl https://get.ignite.com/cli! | bash
+          # Ensure ignite is available globally
+          if [ -f ignite ]; then sudo mv ignite /usr/local/bin/; fi
+
+      # --- RUST & CARGO SECTION ---
+      # Following your specific instructions for Rustup
+      - name: Install Rustup and Cargo
+        run: |
+          curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
+          source "$HOME/.cargo/env"
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      # --- CIRCOM 2 SECTION ---
+      # Caching prevents rebuilding Circom (saves ~5 minutes per run)
+      - name: Cache Circom Binary
+        id: cache-circom
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/circom
+          key: ${{ runner.os }}-circom-v2
+
+      - name: Build and Install Circom 2
+        if: steps.cache-circom.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/iden3/circom.git
+          cd circom
+          cargo build --release
+          cargo install --path circom
+
+      # --- VERIFICATION SECTION ---
+      - name: Verify All Versions
+        run: |
+          echo "--- GO VERSION ---"
+          go version
+          
+          echo -e "\n--- IGNITE VERSION ---"
+          ignite version
+          
+          echo -e "\n--- CARGO VERSION ---"
+          cargo --version
+          
+          echo -e "\n--- CIRCOM VERSION ---"
+          circom --version
+          
+          echo -e "\n--- CIRCOM HELP ---"
+          circom --help

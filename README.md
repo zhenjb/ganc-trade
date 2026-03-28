@@ -103,20 +103,19 @@ ganc test -obs smartc@deposit
 ```
 </details>
 
-## ©️ Terms and Privacy Policy
-We hereby notify you that your use of or involvement with this project constitutes your acceptance of the following Terms and Privacy Policy: <br>
+<details>
+    <summary>Withdraw Token</summary>
 
-- ___Acknowledgment of Terms and Usage Policies for Ignite CLI:__ We acknowledge and adhere to the terms of service and usage policies of the third-party software provider, [Ignite CLI](https://ignite.com/)._ <br>
-- ___Acknowledgment of Terms for Circom 2 and SNARK JS:__ We recognize and comply with the terms and conditions governing the source code management and usage of [Circom 2](https://iden3.io/circom) and [snarkjs](https://github.com/iden3/snarkjs)._ <br>
-- ___Contributions of Applied Products:__ We acknowledge the significant contributions of the various tools and libraries utilized in this project._ <br>
+***Mandatory:*** 
+*The prerequisite is that the chain must be running first.* 
+```bash
+# Deposit Token
+ganc test -obs smartc@withdraw
 
-
-## ©️ Contributing
-*(update)*
-
-
-## ©️ Security
-*(update)*
+# Open a new terminal
+ganc test -obs smartc@withdraw
+```
+</details>
 
 
 ## ©️ Settings
@@ -135,3 +134,23 @@ ganc setup
 ganc help
 # or ganc -h
 ```
+
+
+## ©️ Terms and Privacy Policy
+We hereby notify you that your use of or involvement with this project constitutes your acceptance of the following Terms and Privacy Policy: <br>
+
+- ___Acknowledgment of Terms and Usage Policies for Ignite CLI:__ We acknowledge and adhere to the terms of service and usage policies of the third-party software provider, [Ignite CLI](https://ignite.com/)._ <br>
+- ___Acknowledgment of Terms for Circom 2 and SNARK JS:__ We recognize and comply with the terms and conditions governing the source code management and usage of [Circom 2](https://iden3.io/circom) and [snarkjs](https://github.com/iden3/snarkjs)._ <br>
+- ___Contributions of Applied Products:__ We acknowledge the significant contributions of the various tools and libraries utilized in this project._ <br>
+
+
+## ©️ Contributing
+*(update)*
+
+
+## ©️ Security
+*(update)*
+
+
+## ©️ License
+Apache License 2.0
