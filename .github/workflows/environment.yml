@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  environment-setup:
+  environment:
     runs-on: ubuntu-latest
 
     steps:

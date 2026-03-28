@@ -1,0 +1,49 @@
+name: Ganc Chain Execution
+
+on:
+  push:
+    branches: 
+      - main
+      - appreciate
+  workflow_dispatch:
+
+jobs:
+  ganc-chain:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 1. Restore Cached Binaries (Go, Ignite, Circom)
+      # This avoids re-downloading/re-building everything
+      - name: Restore Tools Cache
+        id: cache-tools
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            /usr/local/bin/ignite
+          key: ${{ runner.os }}-ganc-env-v1
+
+      # 2. Setup Go (Required to run the chain, but fast)
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true # Caches go modules automatically
+
+      # 3. Ensure Paths are set
+      - name: Configure Environment Paths
+        run: |
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          # If Ignite was cached in a custom path, add it here
+
+      # 4. Execute Ganc Setup and Chain
+      - name: Run Ganc Setup
+        run: |
+          echo "Executing Setup Script..."
+          chmod +x exe.sh
+          ./exe.sh
+          
+          ganc chain
