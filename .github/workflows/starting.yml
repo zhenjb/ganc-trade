@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # --- 1. ENVIRONMENT SETUP (Fast) ---
+      # --- 1. SETUP ENVIRONMENT ---
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -23,25 +23,27 @@ jobs:
 
       - name: Install Ignite CLI
         run: |
+          # The script automatically installs to /usr/local/bin/ignite
           curl https://get.ignite.com/cli! | bash
-          sudo mv ignite /usr/local/bin/
 
-      # --- 2. EXECUTE YOUR SETUP SCRIPTS ---
-      - name: Install Ganc CLI via exe.sh
+      # --- 2. INSTALL GANC CLI ---
+      - name: Run Ganc Setup
         run: |
-          # 1. Run your setup logic
+          # Run your execution script
           chmod +x exe.sh
           ./exe.sh
           
-          # 2. MANDATORY: Map your custom script directory to GitHub Path
-          # Your setup.sh defines SCRIPT_DIR="$HOME/scripts"
+          # Persist the Ganc script directory to GITHUB_PATH
+          # Based on your setup.sh: SCRIPT_DIR="$HOME/scripts"
           echo "$HOME/scripts" >> $GITHUB_PATH
 
-      # --- 3. RUN GANC CHAIN ---
+      # --- 3. EXECUTE GANC CHAIN ---
       - name: Execute Ganc Chain
         run: |
-          # Verify path is updated
-          echo "Current Path: $PATH"
+          # Verify Ignite and Ganc are accessible
+          ignite version
+          ganc version
           
-          # Now 'ganc' will be found globally
+          echo "Starting Ganc Chain..."
+          # Running the chain command
           ganc chain
