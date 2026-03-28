@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-ganc-process:
+  ganc-chain:
     runs-on: ubuntu-latest
 
     steps:
@@ -55,12 +55,16 @@ jobs:
         run: |
           echo "Initializing Ganc Environment..."
           
-          # Grant execution permissions to your setup script
+          # 1. Grant permissions and run your setup script
           chmod +x exe.sh
-          
-          # Execute the setup script
           ./exe.sh
           
-          # Run the Ganc chain command
-          # Note: Ensure 'ganc' is in your PATH or called via its relative path
+          # 2. Add the directory where Ganc was installed to the PATH
+          # Usually, Go/Ganc tools install to $HOME/go/bin or a local bin
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+          echo "$(pwd)" >> $GITHUB_PATH
+          
+          # 3. Refresh the path for the current shell session
+          export PATH=$PATH:$HOME/go/bin:$(pwd)
+          
           ganc chain
