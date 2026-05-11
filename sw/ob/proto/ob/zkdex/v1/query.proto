@@ -15,6 +15,14 @@ service Query {
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
     option (google.api.http).get = "/ob/zkdex/v1/params";
   }
+  // ModuleAccountAddress queries the zkdex module account address.
+  rpc ModuleAccountAddress(QueryModuleAccountAddressRequest) returns (QueryModuleAccountAddressResponse) {
+    option (google.api.http).get = "/ob/zkdex/v1/module_account_address";
+  }
+  // ModuleAccountBalance queries the zkdex module account spendable balance.
+  rpc ModuleAccountBalance(QueryModuleAccountBalanceRequest) returns (QueryModuleAccountBalanceResponse) {
+    option (google.api.http).get = "/ob/zkdex/v1/module_account_balance";
+  }
 }
 
 // QueryParamsRequest is request type for the Query/Params RPC method.
@@ -27,4 +35,16 @@ message QueryParamsResponse {
     (gogoproto.nullable) = false,
     (amino.dont_omitempty) = true
   ];
+}
+
+message QueryModuleAccountAddressRequest {}
+
+message QueryModuleAccountAddressResponse {
+  string address = 1;
+}
+
+message QueryModuleAccountBalanceRequest {}
+
+message QueryModuleAccountBalanceResponse {
+  string balance = 1;
 }

@@ -114,34 +114,206 @@ func (m *QueryParamsResponse) GetParams() Params {
 	return Params{}
 }
 
+type QueryModuleAccountAddressRequest struct {
+}
+
+func (m *QueryModuleAccountAddressRequest) Reset()         { *m = QueryModuleAccountAddressRequest{} }
+func (m *QueryModuleAccountAddressRequest) String() string { return proto.CompactTextString(m) }
+func (*QueryModuleAccountAddressRequest) ProtoMessage()    {}
+func (*QueryModuleAccountAddressRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5a66018e46298a4e, []int{2}
+}
+func (m *QueryModuleAccountAddressRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *QueryModuleAccountAddressRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_QueryModuleAccountAddressRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *QueryModuleAccountAddressRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryModuleAccountAddressRequest.Merge(m, src)
+}
+func (m *QueryModuleAccountAddressRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *QueryModuleAccountAddressRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryModuleAccountAddressRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_QueryModuleAccountAddressRequest proto.InternalMessageInfo
+
+type QueryModuleAccountAddressResponse struct {
+	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+}
+
+func (m *QueryModuleAccountAddressResponse) Reset()         { *m = QueryModuleAccountAddressResponse{} }
+func (m *QueryModuleAccountAddressResponse) String() string { return proto.CompactTextString(m) }
+func (*QueryModuleAccountAddressResponse) ProtoMessage()    {}
+func (*QueryModuleAccountAddressResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5a66018e46298a4e, []int{3}
+}
+func (m *QueryModuleAccountAddressResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *QueryModuleAccountAddressResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_QueryModuleAccountAddressResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *QueryModuleAccountAddressResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryModuleAccountAddressResponse.Merge(m, src)
+}
+func (m *QueryModuleAccountAddressResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *QueryModuleAccountAddressResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryModuleAccountAddressResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_QueryModuleAccountAddressResponse proto.InternalMessageInfo
+
+func (m *QueryModuleAccountAddressResponse) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
+
+type QueryModuleAccountBalanceRequest struct {
+}
+
+func (m *QueryModuleAccountBalanceRequest) Reset()         { *m = QueryModuleAccountBalanceRequest{} }
+func (m *QueryModuleAccountBalanceRequest) String() string { return proto.CompactTextString(m) }
+func (*QueryModuleAccountBalanceRequest) ProtoMessage()    {}
+func (*QueryModuleAccountBalanceRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5a66018e46298a4e, []int{4}
+}
+func (m *QueryModuleAccountBalanceRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *QueryModuleAccountBalanceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_QueryModuleAccountBalanceRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *QueryModuleAccountBalanceRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryModuleAccountBalanceRequest.Merge(m, src)
+}
+func (m *QueryModuleAccountBalanceRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *QueryModuleAccountBalanceRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryModuleAccountBalanceRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_QueryModuleAccountBalanceRequest proto.InternalMessageInfo
+
+type QueryModuleAccountBalanceResponse struct {
+	Balance string `protobuf:"bytes,1,opt,name=balance,proto3" json:"balance,omitempty"`
+}
+
+func (m *QueryModuleAccountBalanceResponse) Reset()         { *m = QueryModuleAccountBalanceResponse{} }
+func (m *QueryModuleAccountBalanceResponse) String() string { return proto.CompactTextString(m) }
+func (*QueryModuleAccountBalanceResponse) ProtoMessage()    {}
+func (*QueryModuleAccountBalanceResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5a66018e46298a4e, []int{5}
+}
+func (m *QueryModuleAccountBalanceResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *QueryModuleAccountBalanceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_QueryModuleAccountBalanceResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *QueryModuleAccountBalanceResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryModuleAccountBalanceResponse.Merge(m, src)
+}
+func (m *QueryModuleAccountBalanceResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *QueryModuleAccountBalanceResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryModuleAccountBalanceResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_QueryModuleAccountBalanceResponse proto.InternalMessageInfo
+
+func (m *QueryModuleAccountBalanceResponse) GetBalance() string {
+	if m != nil {
+		return m.Balance
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterType((*QueryParamsRequest)(nil), "ob.zkdex.v1.QueryParamsRequest")
 	proto.RegisterType((*QueryParamsResponse)(nil), "ob.zkdex.v1.QueryParamsResponse")
+	proto.RegisterType((*QueryModuleAccountAddressRequest)(nil), "ob.zkdex.v1.QueryModuleAccountAddressRequest")
+	proto.RegisterType((*QueryModuleAccountAddressResponse)(nil), "ob.zkdex.v1.QueryModuleAccountAddressResponse")
+	proto.RegisterType((*QueryModuleAccountBalanceRequest)(nil), "ob.zkdex.v1.QueryModuleAccountBalanceRequest")
+	proto.RegisterType((*QueryModuleAccountBalanceResponse)(nil), "ob.zkdex.v1.QueryModuleAccountBalanceResponse")
 }
 
 func init() { proto.RegisterFile("ob/zkdex/v1/query.proto", fileDescriptor_5a66018e46298a4e) }
 
 var fileDescriptor_5a66018e46298a4e = []byte{
-	// 299 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0xcf, 0x4f, 0xd2, 0xaf,
-	0xca, 0x4e, 0x49, 0xad, 0xd0, 0x2f, 0x33, 0xd4, 0x2f, 0x2c, 0x4d, 0x2d, 0xaa, 0xd4, 0x2b, 0x28,
-	0xca, 0x2f, 0xc9, 0x17, 0xe2, 0xce, 0x4f, 0xd2, 0x03, 0x4b, 0xe8, 0x95, 0x19, 0x4a, 0x09, 0x26,
-	0xe6, 0x66, 0xe6, 0xe5, 0xeb, 0x83, 0x49, 0x88, 0xbc, 0x94, 0x56, 0x72, 0x7e, 0x71, 0x6e, 0x7e,
-	0xb1, 0x7e, 0x52, 0x62, 0x71, 0x2a, 0x44, 0xa3, 0x7e, 0x99, 0x61, 0x52, 0x6a, 0x49, 0xa2, 0xa1,
-	0x7e, 0x41, 0x62, 0x7a, 0x66, 0x5e, 0x62, 0x49, 0x66, 0x7e, 0x1e, 0x54, 0xad, 0x48, 0x7a, 0x7e,
-	0x7a, 0x3e, 0x98, 0xa9, 0x0f, 0x62, 0x41, 0x45, 0x65, 0xd2, 0xf3, 0xf3, 0xd3, 0x73, 0x52, 0xf5,
-	0x13, 0x0b, 0x32, 0xf5, 0x13, 0xf3, 0xf2, 0xf2, 0x4b, 0xc0, 0x5a, 0x8a, 0xa1, 0xb2, 0x12, 0xc8,
-	0x0e, 0x2b, 0x48, 0x2c, 0x4a, 0xcc, 0x85, 0xca, 0x28, 0x89, 0x70, 0x09, 0x05, 0x82, 0xec, 0x0b,
-	0x00, 0x0b, 0x06, 0xa5, 0x16, 0x96, 0xa6, 0x16, 0x97, 0x28, 0xf9, 0x72, 0x09, 0xa3, 0x88, 0x16,
-	0x17, 0xe4, 0xe7, 0x15, 0xa7, 0x0a, 0x99, 0x71, 0xb1, 0x41, 0x34, 0x4b, 0x30, 0x2a, 0x30, 0x6a,
-	0x70, 0x1b, 0x09, 0xeb, 0x21, 0xf9, 0x4b, 0x0f, 0xa2, 0xd8, 0x89, 0xf3, 0xc4, 0x3d, 0x79, 0x86,
-	0x15, 0xcf, 0x37, 0x68, 0x31, 0x06, 0x41, 0x55, 0x1b, 0x15, 0x72, 0xb1, 0x82, 0x8d, 0x13, 0xca,
-	0xe0, 0x62, 0x83, 0xa8, 0x12, 0x92, 0x47, 0xd1, 0x8a, 0xe9, 0x04, 0x29, 0x05, 0xdc, 0x0a, 0x20,
-	0xae, 0x51, 0x92, 0x6e, 0xba, 0xfc, 0x64, 0x32, 0x93, 0xa8, 0x90, 0xb0, 0x3e, 0xa6, 0xef, 0x9c,
-	0xb4, 0x4e, 0x3c, 0x92, 0x63, 0xbc, 0xf0, 0x48, 0x8e, 0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x09, 0x8f,
-	0xe5, 0x18, 0x2e, 0x3c, 0x96, 0x63, 0xb8, 0xf1, 0x58, 0x8e, 0x21, 0x4a, 0x20, 0x3f, 0x49, 0xbf,
-	0x02, 0xaa, 0xbe, 0xa4, 0xb2, 0x20, 0xb5, 0x38, 0x89, 0x0d, 0x1c, 0x14, 0xc6, 0x80, 0x00, 0x00,
-	0x00, 0xff, 0xff, 0xea, 0x80, 0xef, 0xbc, 0xbf, 0x01, 0x00, 0x00,
+	// 425 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x53, 0x41, 0xcf, 0xd2, 0x40,
+	0x10, 0x6d, 0x35, 0x62, 0xbe, 0xe5, 0xa2, 0x0b, 0x46, 0x52, 0x4d, 0xc1, 0x1a, 0x13, 0x83, 0xb1,
+	0x9b, 0x62, 0xe2, 0xcd, 0x03, 0xdc, 0x49, 0x94, 0xa3, 0x17, 0xb2, 0x6d, 0x37, 0xb5, 0x91, 0xee,
+	0x94, 0x6e, 0x4b, 0xc0, 0xa3, 0xbf, 0xc0, 0xc4, 0x7f, 0xe0, 0xc9, 0xa3, 0x77, 0xff, 0x00, 0x47,
+	0x12, 0x2f, 0x9e, 0x8c, 0x01, 0x13, 0xff, 0x86, 0x61, 0x77, 0x41, 0x6a, 0x11, 0xb8, 0x34, 0xbb,
+	0x33, 0xef, 0xed, 0x7b, 0xf3, 0x26, 0x45, 0x77, 0xc1, 0x27, 0xef, 0xde, 0x86, 0x6c, 0x4e, 0x66,
+	0x1e, 0x99, 0x16, 0x2c, 0x5b, 0xb8, 0x69, 0x06, 0x39, 0xe0, 0x3a, 0xf8, 0xae, 0x6c, 0xb8, 0x33,
+	0xcf, 0xba, 0x4d, 0x93, 0x98, 0x03, 0x91, 0x5f, 0xd5, 0xb7, 0xba, 0x01, 0x88, 0x04, 0x04, 0xf1,
+	0xa9, 0x60, 0x8a, 0x48, 0x66, 0x9e, 0xcf, 0x72, 0xea, 0x91, 0x94, 0x46, 0x31, 0xa7, 0x79, 0x0c,
+	0x5c, 0x63, 0x9b, 0x11, 0x44, 0x20, 0x8f, 0x64, 0x7b, 0xd2, 0xd5, 0xfb, 0x11, 0x40, 0x34, 0x61,
+	0x84, 0xa6, 0x31, 0xa1, 0x9c, 0x43, 0x2e, 0x29, 0x42, 0x77, 0x5b, 0x87, 0xc6, 0x52, 0x9a, 0xd1,
+	0x44, 0x77, 0x9c, 0x26, 0xc2, 0xaf, 0xb6, 0x7a, 0x2f, 0x65, 0x71, 0xc4, 0xa6, 0x05, 0x13, 0xb9,
+	0x33, 0x44, 0x8d, 0x52, 0x55, 0xa4, 0xc0, 0x05, 0xc3, 0xcf, 0x51, 0x4d, 0x91, 0x5b, 0x66, 0xc7,
+	0x7c, 0x5c, 0xef, 0x35, 0xdc, 0x83, 0xb9, 0x5c, 0x05, 0x1e, 0x5c, 0x2d, 0x7f, 0xb4, 0x8d, 0xcf,
+	0xbf, 0xbf, 0x74, 0xcd, 0x91, 0x46, 0x3b, 0x0e, 0xea, 0xc8, 0xe7, 0x86, 0x10, 0x16, 0x13, 0xd6,
+	0x0f, 0x02, 0x28, 0x78, 0xde, 0x0f, 0xc3, 0x8c, 0x89, 0xbd, 0xe4, 0x0b, 0xf4, 0xe0, 0x04, 0x46,
+	0x1b, 0x68, 0xa1, 0x9b, 0x54, 0x95, 0xa4, 0x83, 0xab, 0xd1, 0xee, 0x7a, 0x5c, 0x62, 0x40, 0x27,
+	0x94, 0x07, 0xec, 0xa4, 0xc4, 0x1e, 0xf3, 0x57, 0xc2, 0x57, 0xa5, 0x9d, 0x84, 0xbe, 0xf6, 0xbe,
+	0x5e, 0x47, 0x37, 0x24, 0x1f, 0xbf, 0x41, 0x35, 0x35, 0x2c, 0x6e, 0x97, 0x12, 0xa8, 0x26, 0x69,
+	0x75, 0xfe, 0x0f, 0x50, 0x82, 0xce, 0xbd, 0xf7, 0xdf, 0x7e, 0x7d, 0xbc, 0x76, 0x07, 0x37, 0x48,
+	0x75, 0x49, 0xf8, 0x93, 0x89, 0x9a, 0xc7, 0x12, 0xc1, 0x4f, 0xab, 0xef, 0x9e, 0x48, 0xd7, 0x72,
+	0x2f, 0x85, 0x6b, 0x53, 0x4f, 0xa4, 0xa9, 0x47, 0xf8, 0x61, 0xc9, 0x54, 0x22, 0x29, 0x63, 0xaa,
+	0x38, 0x63, 0x9d, 0x7d, 0xd5, 0xa4, 0xce, 0xf4, 0xac, 0xc9, 0xf2, 0x7e, 0xce, 0x9a, 0xfc, 0x67,
+	0x55, 0x97, 0x99, 0xd4, 0xdb, 0x1b, 0x74, 0x97, 0x6b, 0xdb, 0x5c, 0xad, 0x6d, 0xf3, 0xe7, 0xda,
+	0x36, 0x3f, 0x6c, 0x6c, 0x63, 0xb5, 0xb1, 0x8d, 0xef, 0x1b, 0xdb, 0x78, 0x7d, 0x0b, 0x7c, 0x32,
+	0xd7, 0xfc, 0x7c, 0x91, 0x32, 0xe1, 0xd7, 0xe4, 0xbf, 0xf1, 0xec, 0x4f, 0x00, 0x00, 0x00, 0xff,
+	0xff, 0xd7, 0x1b, 0x91, 0xc8, 0xd0, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -158,6 +330,10 @@ const _ = grpc.SupportPackageIsVersion4
 type QueryClient interface {
 	// Parameters queries the parameters of the module.
 	Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error)
+	// ModuleAccountAddress queries the zkdex module account address.
+	ModuleAccountAddress(ctx context.Context, in *QueryModuleAccountAddressRequest, opts ...grpc.CallOption) (*QueryModuleAccountAddressResponse, error)
+	// ModuleAccountBalance queries the zkdex module account spendable balance.
+	ModuleAccountBalance(ctx context.Context, in *QueryModuleAccountBalanceRequest, opts ...grpc.CallOption) (*QueryModuleAccountBalanceResponse, error)
 }
 
 type queryClient struct {
@@ -177,10 +353,32 @@ func (c *queryClient) Params(ctx context.Context, in *QueryParamsRequest, opts .
 	return out, nil
 }
 
+func (c *queryClient) ModuleAccountAddress(ctx context.Context, in *QueryModuleAccountAddressRequest, opts ...grpc.CallOption) (*QueryModuleAccountAddressResponse, error) {
+	out := new(QueryModuleAccountAddressResponse)
+	err := c.cc.Invoke(ctx, "/ob.zkdex.v1.Query/ModuleAccountAddress", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ModuleAccountBalance(ctx context.Context, in *QueryModuleAccountBalanceRequest, opts ...grpc.CallOption) (*QueryModuleAccountBalanceResponse, error) {
+	out := new(QueryModuleAccountBalanceResponse)
+	err := c.cc.Invoke(ctx, "/ob.zkdex.v1.Query/ModuleAccountBalance", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 type QueryServer interface {
 	// Parameters queries the parameters of the module.
 	Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error)
+	// ModuleAccountAddress queries the zkdex module account address.
+	ModuleAccountAddress(context.Context, *QueryModuleAccountAddressRequest) (*QueryModuleAccountAddressResponse, error)
+	// ModuleAccountBalance queries the zkdex module account spendable balance.
+	ModuleAccountBalance(context.Context, *QueryModuleAccountBalanceRequest) (*QueryModuleAccountBalanceResponse, error)
 }
 
 // UnimplementedQueryServer can be embedded to have forward compatible implementations.
@@ -189,6 +387,12 @@ type UnimplementedQueryServer struct {
 
 func (*UnimplementedQueryServer) Params(ctx context.Context, req *QueryParamsRequest) (*QueryParamsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Params not implemented")
+}
+func (*UnimplementedQueryServer) ModuleAccountAddress(ctx context.Context, req *QueryModuleAccountAddressRequest) (*QueryModuleAccountAddressResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ModuleAccountAddress not implemented")
+}
+func (*UnimplementedQueryServer) ModuleAccountBalance(ctx context.Context, req *QueryModuleAccountBalanceRequest) (*QueryModuleAccountBalanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ModuleAccountBalance not implemented")
 }
 
 func RegisterQueryServer(s grpc1.Server, srv QueryServer) {
@@ -213,6 +417,42 @@ func _Query_Params_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_ModuleAccountAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryModuleAccountAddressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ModuleAccountAddress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ob.zkdex.v1.Query/ModuleAccountAddress",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ModuleAccountAddress(ctx, req.(*QueryModuleAccountAddressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ModuleAccountBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryModuleAccountBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ModuleAccountBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ob.zkdex.v1.Query/ModuleAccountBalance",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ModuleAccountBalance(ctx, req.(*QueryModuleAccountBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var Query_serviceDesc = _Query_serviceDesc
 var _Query_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ob.zkdex.v1.Query",
@@ -221,6 +461,14 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Params",
 			Handler:    _Query_Params_Handler,
+		},
+		{
+			MethodName: "ModuleAccountAddress",
+			Handler:    _Query_ModuleAccountAddress_Handler,
+		},
+		{
+			MethodName: "ModuleAccountBalance",
+			Handler:    _Query_ModuleAccountBalance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -283,6 +531,112 @@ func (m *QueryParamsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *QueryModuleAccountAddressRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *QueryModuleAccountAddressRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *QueryModuleAccountAddressRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *QueryModuleAccountAddressResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *QueryModuleAccountAddressResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *QueryModuleAccountAddressResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Address) > 0 {
+		i -= len(m.Address)
+		copy(dAtA[i:], m.Address)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.Address)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *QueryModuleAccountBalanceRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *QueryModuleAccountBalanceRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *QueryModuleAccountBalanceRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *QueryModuleAccountBalanceResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *QueryModuleAccountBalanceResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *QueryModuleAccountBalanceResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Balance) > 0 {
+		i -= len(m.Balance)
+		copy(dAtA[i:], m.Balance)
+		i = encodeVarintQuery(dAtA, i, uint64(len(m.Balance)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintQuery(dAtA []byte, offset int, v uint64) int {
 	offset -= sovQuery(v)
 	base := offset
@@ -311,6 +665,50 @@ func (m *QueryParamsResponse) Size() (n int) {
 	_ = l
 	l = m.Params.Size()
 	n += 1 + l + sovQuery(uint64(l))
+	return n
+}
+
+func (m *QueryModuleAccountAddressRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *QueryModuleAccountAddressResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Address)
+	if l > 0 {
+		n += 1 + l + sovQuery(uint64(l))
+	}
+	return n
+}
+
+func (m *QueryModuleAccountBalanceRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *QueryModuleAccountBalanceResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Balance)
+	if l > 0 {
+		n += 1 + l + sovQuery(uint64(l))
+	}
 	return n
 }
 
@@ -431,6 +829,270 @@ func (m *QueryParamsResponse) Unmarshal(dAtA []byte) error {
 			if err := m.Params.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQuery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *QueryModuleAccountAddressRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQuery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: QueryModuleAccountAddressRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: QueryModuleAccountAddressRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQuery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *QueryModuleAccountAddressResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQuery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: QueryModuleAccountAddressResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: QueryModuleAccountAddressResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQuery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQuery
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Address = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQuery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *QueryModuleAccountBalanceRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQuery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: QueryModuleAccountBalanceRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: QueryModuleAccountBalanceRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQuery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *QueryModuleAccountBalanceResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQuery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: QueryModuleAccountBalanceResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: QueryModuleAccountBalanceResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Balance", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQuery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQuery
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQuery
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Balance = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

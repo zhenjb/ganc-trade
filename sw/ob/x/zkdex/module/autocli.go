@@ -17,6 +17,16 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					Use:       "params",
 					Short:     "Shows the parameters of the module",
 				},
+				{
+					RpcMethod: "ModuleAccountAddress",
+					Use:       "module-account-address",
+					Short:     "Shows the zkdex module account address",
+				},
+				{
+					RpcMethod: "ModuleAccountBalance",
+					Use:       "module-account-balance",
+					Short:     "Shows the zkdex module account spendable balance",
+				},
 				// this line is used by ignite scaffolding # autocli/query
 			},
 		},

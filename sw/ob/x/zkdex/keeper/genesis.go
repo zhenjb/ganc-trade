@@ -2,12 +2,19 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	"ob/x/zkdex/types"
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.
 func (k Keeper) InitGenesis(ctx context.Context, genState types.GenesisState) error {
+	if k.authKeeper != nil {
+		// Ensures the zkdex module account exists in x/auth (must be listed in app ModuleAccountPermissions).
+		if macc := k.authKeeper.GetModuleAccount(ctx, types.ModuleName); macc == nil {
+			return fmt.Errorf("zkdex module account %q is not registered in auth module permissions", types.ModuleName)
+		}
+	}
 	return k.Params.Set(ctx, genState.Params)
 }
 
