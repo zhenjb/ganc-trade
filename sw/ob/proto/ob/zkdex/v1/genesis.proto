@@ -14,4 +14,7 @@ message GenesisState {
     (gogoproto.nullable) = false,
     (amino.dont_omitempty) = true
   ];
+
+  // Lưu trữ State Root khởi tạo
+  string current_state_root = 2;
 }

@@ -17,3 +17,10 @@ const (
 
 // ParamsKey is the prefix to retrieve all Params
 var ParamsKey = collections.NewPrefix("p_zkdex")
+
+// StateRootKey is the prefix to retrieve the state root
+var StateRootKey = collections.NewPrefix("sr_zkdex")
+
+func KeyPrefix(p string) []byte {
+	return []byte(p)
+}

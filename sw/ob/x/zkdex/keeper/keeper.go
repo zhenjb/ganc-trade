@@ -6,7 +6,8 @@ import (
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/core/address"
-	corestore "cosmossdk.io/core/store"
+	"cosmossdk.io/core/store" // Tên mặc định là store
+	
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -15,22 +16,21 @@ import (
 )
 
 type Keeper struct {
-	storeService corestore.KVStoreService
+	storeService store.KVStoreService // Đã đổi corestore -> store
 	cdc          codec.Codec
 	addressCodec address.Codec
-	// Address capable of executing a MsgUpdateParams message.
-	// Typically, this should be the x/gov module account.
-	authority []byte
+	authority    []byte
 
-	Schema collections.Schema
-	Params collections.Item[types.Params]
+	Schema    collections.Schema
+	Params    collections.Item[types.Params]
+	StateRoot collections.Item[string]
 
 	bankKeeper types.BankKeeper
 	authKeeper types.AuthKeeper
 }
 
 func NewKeeper(
-	storeService corestore.KVStoreService,
+	storeService store.KVStoreService, // Đã đổi corestore -> store
 	cdc codec.Codec,
 	addressCodec address.Codec,
 	authority []byte,
@@ -53,6 +53,7 @@ func NewKeeper(
 		bankKeeper: bankKeeper,
 		authKeeper: authKeeper,
 		Params:     collections.NewItem(sb, types.ParamsKey, "params", codec.CollValue[types.Params](cdc)),
+		StateRoot:  collections.NewItem(sb, types.StateRootKey, "state_root", collections.StringValue),
 	}
 
 	schema, err := sb.Build()
@@ -96,4 +97,17 @@ func (k Keeper) EscrowFunds(ctx context.Context, sender sdk.AccAddress, amt sdk.
 // ReleaseFunds sends coins from the zkdex module account to an account.
 func (k Keeper) ReleaseFunds(ctx context.Context, recipient sdk.AccAddress, amt sdk.Coins) error {
 	return k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, recipient, amt)
+}
+
+func (k Keeper) SetStateRoot(ctx context.Context, root string) error {
+	return k.StateRoot.Set(ctx, root)
+}
+
+func (k Keeper) GetStateRoot(ctx context.Context) (string, error) {
+	root, err := k.StateRoot.Get(ctx)
+	if err != nil {
+		// If not found, return default
+		return "0xrootA", nil
+	}
+	return root, nil
 }

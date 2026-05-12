@@ -4,6 +4,7 @@ package types
 func DefaultGenesis() *GenesisState {
 	return &GenesisState{
 		Params: DefaultParams(),
+		CurrentStateRoot: "0xrootA", // MOCK TEST GIÁ TRỊ ROOT BAN ĐẦU
 	}
 }
 

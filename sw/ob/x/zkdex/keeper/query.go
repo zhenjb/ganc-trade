@@ -38,3 +38,15 @@ func (q queryServer) ModuleAccountBalance(ctx context.Context, req *types.QueryM
 	coins := q.k.GetModuleAccountBalance(ctx)
 	return &types.QueryModuleAccountBalanceResponse{Balance: coins.String()}, nil
 }
+
+func (q queryServer) CurrentStateRoot(ctx context.Context, req *types.QueryCurrentStateRootRequest) (*types.QueryCurrentStateRootResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	root, err := q.k.GetStateRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &types.QueryCurrentStateRootResponse{StateRoot: root}, nil
+}

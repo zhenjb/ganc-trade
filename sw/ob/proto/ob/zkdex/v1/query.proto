@@ -23,6 +23,10 @@ service Query {
   rpc ModuleAccountBalance(QueryModuleAccountBalanceRequest) returns (QueryModuleAccountBalanceResponse) {
     option (google.api.http).get = "/ob/zkdex/v1/module_account_balance";
   }
+  // CurrentStateRoot queries the current state root.
+  rpc CurrentStateRoot(QueryCurrentStateRootRequest) returns (QueryCurrentStateRootResponse) {
+    option (google.api.http).get = "/ob/zkdex/v1/current_state_root";
+  }
 }
 
 // QueryParamsRequest is request type for the Query/Params RPC method.
@@ -47,4 +51,10 @@ message QueryModuleAccountBalanceRequest {}
 
 message QueryModuleAccountBalanceResponse {
   string balance = 1;
+}
+
+message QueryCurrentStateRootRequest {}
+
+message QueryCurrentStateRootResponse {
+  string state_root = 1;
 }

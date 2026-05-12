@@ -20,3 +20,15 @@ func TestParamsQuery(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, &types.QueryParamsResponse{Params: params}, response)
 }
+
+func TestCurrentStateRootQuery(t *testing.T) {
+	f := initFixture(t)
+
+	 qs := keeper.NewQueryServerImpl(f.keeper)
+	expectedRoot := "0x1234567890abcdef"
+	require.NoError(t, f.keeper.SetStateRoot(f.ctx, expectedRoot))
+
+	response, err := qs.CurrentStateRoot(f.ctx, &types.QueryCurrentStateRootRequest{})
+	require.NoError(t, err)
+	require.Equal(t, &types.QueryCurrentStateRootResponse{StateRoot: expectedRoot}, response)
+}
