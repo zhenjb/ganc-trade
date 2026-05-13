@@ -4,6 +4,7 @@ package ob.zkdex.v1;
 import "amino/amino.proto";
 import "gogoproto/gogo.proto";
 import "ob/zkdex/v1/params.proto";
+import "ob/zkdex/v1/types.proto";
 
 option go_package = "ob/x/zkdex/types";
 
@@ -17,4 +18,19 @@ message GenesisState {
 
   // Lưu trữ State Root khởi tạo
   string current_state_root = 2;
+
+  // deposit_records defines the deposit records at genesis
+  repeated DepositRecord deposit_records = 3;
+
+  // withdraw_records defines the withdraw records at genesis
+  repeated WithdrawRecord withdraw_records = 4;
+
+  // nullifier_used defines the used nullifiers at genesis
+  repeated string nullifier_used = 5;
+
+  // deposit_processed defines the processed deposits at genesis
+  repeated string deposit_processed = 6;
+
+  // batch_records defines the batch records at genesis
+  repeated BatchRecord batch_records = 7;
 }

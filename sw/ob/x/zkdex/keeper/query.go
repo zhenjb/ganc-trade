@@ -50,3 +50,63 @@ func (q queryServer) CurrentStateRoot(ctx context.Context, req *types.QueryCurre
 	}
 	return &types.QueryCurrentStateRootResponse{StateRoot: root}, nil
 }
+
+func (q queryServer) DepositRecord(ctx context.Context, req *types.QueryDepositRecordRequest) (*types.QueryDepositRecordResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	record, err := q.k.GetDepositRecord(ctx, req.DepositId)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "deposit record not found")
+	}
+	return &types.QueryDepositRecordResponse{Record: &record}, nil
+}
+
+func (q queryServer) WithdrawRecord(ctx context.Context, req *types.QueryWithdrawRecordRequest) (*types.QueryWithdrawRecordResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	record, err := q.k.GetWithdrawRecord(ctx, req.WithdrawId)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "withdraw record not found")
+	}
+	return &types.QueryWithdrawRecordResponse{Record: &record}, nil
+}
+
+func (q queryServer) NullifierUsed(ctx context.Context, req *types.QueryNullifierUsedRequest) (*types.QueryNullifierUsedResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	used, err := q.k.IsNullifierUsed(ctx, req.Nullifier)
+	if err != nil {
+		return nil, err
+	}
+	return &types.QueryNullifierUsedResponse{Used: used}, nil
+}
+
+func (q queryServer) DepositProcessed(ctx context.Context, req *types.QueryDepositProcessedRequest) (*types.QueryDepositProcessedResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	processed, err := q.k.IsDepositProcessed(ctx, req.DepositId)
+	if err != nil {
+		return nil, err
+	}
+	return &types.QueryDepositProcessedResponse{Processed: processed}, nil
+}
+
+func (q queryServer) BatchRecord(ctx context.Context, req *types.QueryBatchRecordRequest) (*types.QueryBatchRecordResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+
+	record, err := q.k.GetBatchRecord(ctx, req.BatchId)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "batch record not found")
+	}
+	return &types.QueryBatchRecordResponse{Record: &record}, nil
+}

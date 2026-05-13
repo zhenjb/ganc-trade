@@ -30,6 +30,16 @@ type GenesisState struct {
 	Params Params `protobuf:"bytes,1,opt,name=params,proto3" json:"params"`
 	// Lưu trữ State Root khởi tạo
 	CurrentStateRoot string `protobuf:"bytes,2,opt,name=current_state_root,json=currentStateRoot,proto3" json:"current_state_root,omitempty"`
+	// deposit_records defines the deposit records at genesis
+	DepositRecords []*DepositRecord `protobuf:"bytes,3,rep,name=deposit_records,json=depositRecords,proto3" json:"deposit_records,omitempty"`
+	// withdraw_records defines the withdraw records at genesis
+	WithdrawRecords []*WithdrawRecord `protobuf:"bytes,4,rep,name=withdraw_records,json=withdrawRecords,proto3" json:"withdraw_records,omitempty"`
+	// nullifier_used defines the used nullifiers at genesis
+	NullifierUsed []string `protobuf:"bytes,5,rep,name=nullifier_used,json=nullifierUsed,proto3" json:"nullifier_used,omitempty"`
+	// deposit_processed defines the processed deposits at genesis
+	DepositProcessed []string `protobuf:"bytes,6,rep,name=deposit_processed,json=depositProcessed,proto3" json:"deposit_processed,omitempty"`
+	// batch_records defines the batch records at genesis
+	BatchRecords []*BatchRecord `protobuf:"bytes,7,rep,name=batch_records,json=batchRecords,proto3" json:"batch_records,omitempty"`
 }
 
 func (m *GenesisState) Reset()         { *m = GenesisState{} }
@@ -79,6 +89,41 @@ func (m *GenesisState) GetCurrentStateRoot() string {
 	return ""
 }
 
+func (m *GenesisState) GetDepositRecords() []*DepositRecord {
+	if m != nil {
+		return m.DepositRecords
+	}
+	return nil
+}
+
+func (m *GenesisState) GetWithdrawRecords() []*WithdrawRecord {
+	if m != nil {
+		return m.WithdrawRecords
+	}
+	return nil
+}
+
+func (m *GenesisState) GetNullifierUsed() []string {
+	if m != nil {
+		return m.NullifierUsed
+	}
+	return nil
+}
+
+func (m *GenesisState) GetDepositProcessed() []string {
+	if m != nil {
+		return m.DepositProcessed
+	}
+	return nil
+}
+
+func (m *GenesisState) GetBatchRecords() []*BatchRecord {
+	if m != nil {
+		return m.BatchRecords
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*GenesisState)(nil), "ob.zkdex.v1.GenesisState")
 }
@@ -86,22 +131,31 @@ func init() {
 func init() { proto.RegisterFile("ob/zkdex/v1/genesis.proto", fileDescriptor_2a78de66b0b785fc) }
 
 var fileDescriptor_2a78de66b0b785fc = []byte{
-	// 225 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0xcc, 0x4f, 0xd2, 0xaf,
-	0xca, 0x4e, 0x49, 0xad, 0xd0, 0x2f, 0x33, 0xd4, 0x4f, 0x4f, 0xcd, 0x4b, 0x2d, 0xce, 0x2c, 0xd6,
-	0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0xce, 0x4f, 0xd2, 0x03, 0x4b, 0xe9, 0x95, 0x19, 0x4a,
-	0x09, 0x26, 0xe6, 0x66, 0xe6, 0xe5, 0xeb, 0x83, 0x49, 0x88, 0xbc, 0x94, 0x48, 0x7a, 0x7e, 0x7a,
-	0x3e, 0x98, 0xa9, 0x0f, 0x62, 0x41, 0x45, 0x25, 0x90, 0x0d, 0x2c, 0x48, 0x2c, 0x4a, 0xcc, 0x85,
-	0x9a, 0xa7, 0x54, 0xc2, 0xc5, 0xe3, 0x0e, 0xb1, 0x20, 0xb8, 0x24, 0xb1, 0x24, 0x55, 0xc8, 0x8c,
-	0x8b, 0x0d, 0x22, 0x2f, 0xc1, 0xa8, 0xc0, 0xa8, 0xc1, 0x6d, 0x24, 0xac, 0x87, 0x64, 0xa1, 0x5e,
-	0x00, 0x58, 0xca, 0x89, 0xf3, 0xc4, 0x3d, 0x79, 0x86, 0x15, 0xcf, 0x37, 0x68, 0x31, 0x06, 0x41,
-	0x55, 0x0b, 0xe9, 0x70, 0x09, 0x25, 0x97, 0x16, 0x15, 0xa5, 0xe6, 0x95, 0xc4, 0x17, 0x83, 0x0c,
-	0x8a, 0x2f, 0xca, 0xcf, 0x2f, 0x91, 0x60, 0x52, 0x60, 0xd4, 0xe0, 0x0c, 0x12, 0x80, 0xca, 0x80,
-	0x6d, 0x08, 0xca, 0xcf, 0x2f, 0x71, 0xd2, 0x3a, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39, 0xc6,
-	0x07, 0x8f, 0xe4, 0x18, 0x27, 0x3c, 0x96, 0x63, 0xb8, 0xf0, 0x58, 0x8e, 0xe1, 0xc6, 0x63, 0x39,
-	0x86, 0x28, 0x81, 0xfc, 0x24, 0xfd, 0x0a, 0xa8, 0x5b, 0x4b, 0x2a, 0x0b, 0x52, 0x8b, 0x93, 0xd8,
-	0xc0, 0x0e, 0x35, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x15, 0x8a, 0xff, 0x2b, 0x15, 0x01, 0x00,
-	0x00,
+	// 384 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x54, 0x91, 0x4d, 0x4b, 0xe3, 0x40,
+	0x18, 0xc7, 0x93, 0xcd, 0x6e, 0x97, 0x4e, 0xdf, 0xd2, 0xd9, 0x85, 0xcd, 0x66, 0x21, 0x1b, 0x04,
+	0x21, 0x54, 0x49, 0x68, 0x05, 0x6f, 0x5e, 0xaa, 0xe8, 0xb5, 0x44, 0x44, 0xf0, 0x12, 0xf2, 0x32,
+	0xb6, 0xc1, 0x36, 0x13, 0x66, 0xa6, 0x2f, 0xfa, 0x29, 0x3c, 0xf8, 0x21, 0x3c, 0xfa, 0x31, 0x7a,
+	0xec, 0xd1, 0x93, 0x48, 0x7b, 0xf0, 0x6b, 0x48, 0x26, 0xd3, 0x9a, 0x5c, 0x86, 0xe7, 0x79, 0xfe,
+	0xff, 0xf9, 0x3d, 0x7f, 0x78, 0xc0, 0x5f, 0x1c, 0x38, 0x0f, 0x77, 0x11, 0x5a, 0x38, 0xb3, 0xae,
+	0x33, 0x44, 0x09, 0xa2, 0x31, 0xb5, 0x53, 0x82, 0x19, 0x86, 0x35, 0x1c, 0xd8, 0x5c, 0xb2, 0x67,
+	0x5d, 0xbd, 0xed, 0x4f, 0xe2, 0x04, 0x3b, 0xfc, 0xcd, 0x75, 0xfd, 0xf7, 0x10, 0x0f, 0x31, 0x2f,
+	0x9d, 0xac, 0x12, 0x53, 0xad, 0x08, 0x4c, 0x7d, 0xe2, 0x4f, 0x04, 0x4f, 0xff, 0x53, 0x54, 0xd8,
+	0x7d, 0x8a, 0x84, 0xb0, 0xf7, 0xa4, 0x80, 0xfa, 0x45, 0xbe, 0xfa, 0x92, 0xf9, 0x0c, 0xc1, 0x63,
+	0x50, 0xc9, 0x7f, 0x6a, 0xb2, 0x29, 0x5b, 0xb5, 0xde, 0x2f, 0xbb, 0x10, 0xc5, 0x1e, 0x70, 0xa9,
+	0x5f, 0x5d, 0xbe, 0xfd, 0x97, 0x9e, 0x3f, 0x5e, 0x3a, 0xb2, 0x2b, 0xdc, 0xf0, 0x10, 0xc0, 0x70,
+	0x4a, 0x08, 0x4a, 0x98, 0x47, 0x33, 0x90, 0x47, 0x30, 0x66, 0xda, 0x37, 0x53, 0xb6, 0xaa, 0xae,
+	0x2a, 0x14, 0xbe, 0xc1, 0xc5, 0x98, 0xc1, 0x53, 0xd0, 0x8a, 0x50, 0x8a, 0x69, 0xcc, 0x3c, 0x82,
+	0x42, 0x4c, 0x22, 0xaa, 0x29, 0xa6, 0x62, 0xd5, 0x7a, 0x7a, 0x69, 0xdd, 0x59, 0xee, 0x71, 0xb9,
+	0xc5, 0x6d, 0x46, 0xc5, 0x96, 0xc2, 0x73, 0xa0, 0xce, 0x63, 0x36, 0x8a, 0x88, 0x3f, 0xdf, 0x51,
+	0xbe, 0x73, 0xca, 0xbf, 0x12, 0xe5, 0x5a, 0x98, 0x04, 0xa6, 0x35, 0x2f, 0xf5, 0x14, 0xee, 0x83,
+	0x66, 0x32, 0x1d, 0x8f, 0xe3, 0xdb, 0x18, 0x11, 0x6f, 0x4a, 0x51, 0xa4, 0xfd, 0x30, 0x15, 0xab,
+	0xea, 0x36, 0x76, 0xd3, 0x2b, 0x8a, 0x22, 0x78, 0x00, 0xda, 0xdb, 0xcc, 0x29, 0xc1, 0x21, 0xa2,
+	0x99, 0xb3, 0xc2, 0x9d, 0xaa, 0x10, 0x06, 0xdb, 0x39, 0x3c, 0x01, 0x8d, 0xc0, 0x67, 0xe1, 0x68,
+	0x17, 0xec, 0x27, 0x0f, 0xa6, 0x95, 0x82, 0xf5, 0x33, 0x87, 0x48, 0x55, 0x0f, 0xbe, 0x1a, 0xda,
+	0xef, 0x2c, 0xd7, 0x86, 0xbc, 0x5a, 0x1b, 0xf2, 0xfb, 0xda, 0x90, 0x1f, 0x37, 0x86, 0xb4, 0xda,
+	0x18, 0xd2, 0xeb, 0xc6, 0x90, 0x6e, 0x54, 0x1c, 0x38, 0x0b, 0x71, 0x4b, 0x7e, 0xc8, 0xa0, 0xc2,
+	0x2f, 0x79, 0xf4, 0x19, 0x00, 0x00, 0xff, 0xff, 0xf0, 0x1c, 0xda, 0x22, 0x4f, 0x02, 0x00, 0x00,
 }
 
 func (m *GenesisState) Marshal() (dAtA []byte, err error) {
@@ -124,6 +178,66 @@ func (m *GenesisState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.BatchRecords) > 0 {
+		for iNdEx := len(m.BatchRecords) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.BatchRecords[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenesis(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x3a
+		}
+	}
+	if len(m.DepositProcessed) > 0 {
+		for iNdEx := len(m.DepositProcessed) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.DepositProcessed[iNdEx])
+			copy(dAtA[i:], m.DepositProcessed[iNdEx])
+			i = encodeVarintGenesis(dAtA, i, uint64(len(m.DepositProcessed[iNdEx])))
+			i--
+			dAtA[i] = 0x32
+		}
+	}
+	if len(m.NullifierUsed) > 0 {
+		for iNdEx := len(m.NullifierUsed) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.NullifierUsed[iNdEx])
+			copy(dAtA[i:], m.NullifierUsed[iNdEx])
+			i = encodeVarintGenesis(dAtA, i, uint64(len(m.NullifierUsed[iNdEx])))
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
+	if len(m.WithdrawRecords) > 0 {
+		for iNdEx := len(m.WithdrawRecords) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.WithdrawRecords[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenesis(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if len(m.DepositRecords) > 0 {
+		for iNdEx := len(m.DepositRecords) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.DepositRecords[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenesis(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
 	if len(m.CurrentStateRoot) > 0 {
 		i -= len(m.CurrentStateRoot)
 		copy(dAtA[i:], m.CurrentStateRoot)
@@ -166,6 +280,36 @@ func (m *GenesisState) Size() (n int) {
 	l = len(m.CurrentStateRoot)
 	if l > 0 {
 		n += 1 + l + sovGenesis(uint64(l))
+	}
+	if len(m.DepositRecords) > 0 {
+		for _, e := range m.DepositRecords {
+			l = e.Size()
+			n += 1 + l + sovGenesis(uint64(l))
+		}
+	}
+	if len(m.WithdrawRecords) > 0 {
+		for _, e := range m.WithdrawRecords {
+			l = e.Size()
+			n += 1 + l + sovGenesis(uint64(l))
+		}
+	}
+	if len(m.NullifierUsed) > 0 {
+		for _, s := range m.NullifierUsed {
+			l = len(s)
+			n += 1 + l + sovGenesis(uint64(l))
+		}
+	}
+	if len(m.DepositProcessed) > 0 {
+		for _, s := range m.DepositProcessed {
+			l = len(s)
+			n += 1 + l + sovGenesis(uint64(l))
+		}
+	}
+	if len(m.BatchRecords) > 0 {
+		for _, e := range m.BatchRecords {
+			l = e.Size()
+			n += 1 + l + sovGenesis(uint64(l))
+		}
 	}
 	return n
 }
@@ -269,6 +413,172 @@ func (m *GenesisState) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.CurrentStateRoot = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DepositRecords", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenesis
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DepositRecords = append(m.DepositRecords, &DepositRecord{})
+			if err := m.DepositRecords[len(m.DepositRecords)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WithdrawRecords", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenesis
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.WithdrawRecords = append(m.WithdrawRecords, &WithdrawRecord{})
+			if err := m.WithdrawRecords[len(m.WithdrawRecords)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NullifierUsed", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenesis
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NullifierUsed = append(m.NullifierUsed, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DepositProcessed", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenesis
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DepositProcessed = append(m.DepositProcessed, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BatchRecords", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenesis
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.BatchRecords = append(m.BatchRecords, &BatchRecord{})
+			if err := m.BatchRecords[len(m.BatchRecords)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

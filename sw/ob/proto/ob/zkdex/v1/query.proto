@@ -6,6 +6,7 @@ import "cosmos/base/query/v1beta1/pagination.proto";
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "ob/zkdex/v1/params.proto";
+import "ob/zkdex/v1/types.proto";
 
 option go_package = "ob/x/zkdex/types";
 
@@ -26,6 +27,26 @@ service Query {
   // CurrentStateRoot queries the current state root.
   rpc CurrentStateRoot(QueryCurrentStateRootRequest) returns (QueryCurrentStateRootResponse) {
     option (google.api.http).get = "/ob/zkdex/v1/current_state_root";
+  }
+  // DepositRecord queries a deposit record by ID.
+  rpc DepositRecord(QueryDepositRecordRequest) returns (QueryDepositRecordResponse) {
+    option (google.api.http).get = "/ob/zkdex/v1/deposit_record/{deposit_id}";
+  }
+  // WithdrawRecord queries a withdraw record by ID.
+  rpc WithdrawRecord(QueryWithdrawRecordRequest) returns (QueryWithdrawRecordResponse) {
+    option (google.api.http).get = "/ob/zkdex/v1/withdraw_record/{withdraw_id}";
+  }
+  // NullifierUsed queries if a nullifier is used.
+  rpc NullifierUsed(QueryNullifierUsedRequest) returns (QueryNullifierUsedResponse) {
+    option (google.api.http).get = "/ob/zkdex/v1/nullifier_used/{nullifier}";
+  }
+  // DepositProcessed queries if a deposit is processed.
+  rpc DepositProcessed(QueryDepositProcessedRequest) returns (QueryDepositProcessedResponse) {
+    option (google.api.http).get = "/ob/zkdex/v1/deposit_processed/{deposit_id}";
+  }
+  // BatchRecord queries a batch record by ID.
+  rpc BatchRecord(QueryBatchRecordRequest) returns (QueryBatchRecordResponse) {
+    option (google.api.http).get = "/ob/zkdex/v1/batch_record/{batch_id}";
   }
 }
 
@@ -57,4 +78,44 @@ message QueryCurrentStateRootRequest {}
 
 message QueryCurrentStateRootResponse {
   string state_root = 1;
+}
+
+message QueryDepositRecordRequest {
+  string deposit_id = 1;
+}
+
+message QueryDepositRecordResponse {
+  DepositRecord record = 1;
+}
+
+message QueryWithdrawRecordRequest {
+  string withdraw_id = 1;
+}
+
+message QueryWithdrawRecordResponse {
+  WithdrawRecord record = 1;
+}
+
+message QueryNullifierUsedRequest {
+  string nullifier = 1;
+}
+
+message QueryNullifierUsedResponse {
+  bool used = 1;
+}
+
+message QueryDepositProcessedRequest {
+  string deposit_id = 1;
+}
+
+message QueryDepositProcessedResponse {
+  bool processed = 1;
+}
+
+message QueryBatchRecordRequest {
+  string batch_id = 1;
+}
+
+message QueryBatchRecordResponse {
+  BatchRecord record = 1;
 }
