@@ -45,3 +45,13 @@ message BatchRecord {
   repeated string withdraw_ids = 5;
   int64 created_height = 6;
 }
+
+// EventDeposit is emitted when a deposit is created
+message EventDeposit {
+  option (amino.name) = "ob/x/zkdex/EventDeposit";
+
+  string deposit_id = 1;
+  string creator = 2;
+  string denom = 3;
+  string amount = 4;
+}
