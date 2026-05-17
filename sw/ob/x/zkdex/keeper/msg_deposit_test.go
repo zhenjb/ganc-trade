@@ -94,8 +94,25 @@ func TestMsgDeposit_FullFlow(t *testing.T) {
 	}
 	resp1, err := f.msgServer.Deposit(f.ctx, msg1)
 	require.NoError(t, err)
+	require.NotNil(t, resp1.DepositRecord)
+	require.Equal(t, alice, resp1.DepositRecord.Owner)
+	require.Equal(t, "uatom", resp1.DepositRecord.Denom)
+	require.Equal(t, "100", resp1.DepositRecord.Amount)
+	require.False(t, resp1.DepositRecord.Processed)
+
 	id1 := resp1.DepositRecord.DepositId
 	fmt.Printf("✅ Success! ID Generated: %s\n", id1)
+
+	// ONCHAIN-05 creates the record, ONCHAIN-04 persists it.
+	storedRecord1, err := f.keeper.GetDepositRecord(f.ctx, id1)
+	require.NoError(t, err)
+	require.Equal(t, *resp1.DepositRecord, storedRecord1)
+
+	// This is the same query path backend/frontend use through gRPC/REST.
+	qs := keeper.NewQueryServerImpl(f.keeper)
+	queryResp1, err := qs.DepositRecord(f.ctx, &types.QueryDepositRecordRequest{DepositId: id1})
+	require.NoError(t, err)
+	require.Equal(t, resp1.DepositRecord, queryResp1.Record)
 
 	// --- STEP 2: CHECK UNIQUE ID & MULTIPLE DEPOSITS ---
 	fmt.Println("\n--- STEP 2: Second Deposit (Same block check) ---")

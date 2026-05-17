@@ -27,6 +27,18 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					Use:       "module-account-balance",
 					Short:     "Shows the zkdex module account spendable balance",
 				},
+				{
+					RpcMethod:      "DepositRecord",
+					Use:            "deposit-record [deposit-id]",
+					Short:          "Shows a zkdex deposit record",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "deposit_id"}},
+				},
+				{
+					RpcMethod:      "DepositProcessed",
+					Use:            "deposit-processed [deposit-id]",
+					Short:          "Shows whether a zkdex deposit has been processed",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "deposit_id"}},
+				},
 				// this line is used by ignite scaffolding # autocli/query
 			},
 		},
@@ -37,6 +49,12 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 				{
 					RpcMethod: "UpdateParams",
 					Skip:      true, // skipped because authority gated
+				},
+				{
+					RpcMethod:      "Deposit",
+					Use:            "deposit [denom] [amount]",
+					Short:          "Send a zkdex deposit tx",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "denom"}, {ProtoField: "amount"}},
 				},
 				// this line is used by ignite scaffolding # autocli/tx
 			},

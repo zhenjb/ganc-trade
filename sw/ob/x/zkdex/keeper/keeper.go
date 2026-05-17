@@ -2,12 +2,13 @@ package keeper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/core/address"
 	"cosmossdk.io/core/store" // Tên mặc định là store
-	
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -21,14 +22,14 @@ type Keeper struct {
 	addressCodec address.Codec
 	authority    []byte
 
-	Schema            collections.Schema
-	Params            collections.Item[types.Params]
-	StateRoot         collections.Item[string]
-	DepositRecords    collections.Map[string, types.DepositRecord]
-	WithdrawRecords   collections.Map[string, types.WithdrawRecord]
-	NullifierUsed     collections.Map[string, bool]
-	DepositProcessed  collections.Map[string, bool]
-	BatchRecords      collections.Map[string, types.BatchRecord]
+	Schema           collections.Schema
+	Params           collections.Item[types.Params]
+	StateRoot        collections.Item[string]
+	DepositRecords   collections.Map[string, types.DepositRecord]
+	WithdrawRecords  collections.Map[string, types.WithdrawRecord]
+	NullifierUsed    collections.Map[string, bool]
+	DepositProcessed collections.Map[string, bool]
+	BatchRecords     collections.Map[string, types.BatchRecord]
 
 	bankKeeper types.BankKeeper
 	authKeeper types.AuthKeeper
@@ -55,15 +56,15 @@ func NewKeeper(
 		addressCodec: addressCodec,
 		authority:    authority,
 
-		bankKeeper: bankKeeper,
-		authKeeper: authKeeper,
-		Params:            collections.NewItem(sb, types.ParamsKey, "params", codec.CollValue[types.Params](cdc)),
-		StateRoot:         collections.NewItem(sb, types.StateRootKey, "state_root", collections.StringValue),
-		DepositRecords:    collections.NewMap(sb, types.DepositRecordKey, "deposit_records", collections.StringKey, codec.CollValue[types.DepositRecord](cdc)),
-		WithdrawRecords:   collections.NewMap(sb, types.WithdrawRecordKey, "withdraw_records", collections.StringKey, codec.CollValue[types.WithdrawRecord](cdc)),
-		NullifierUsed:     collections.NewMap(sb, types.NullifierUsedKey, "nullifier_used", collections.StringKey, collections.BoolValue),
-		DepositProcessed:  collections.NewMap(sb, types.DepositProcessedKey, "deposit_processed", collections.StringKey, collections.BoolValue),
-		BatchRecords:      collections.NewMap(sb, types.BatchRecordKey, "batch_records", collections.StringKey, codec.CollValue[types.BatchRecord](cdc)),
+		bankKeeper:       bankKeeper,
+		authKeeper:       authKeeper,
+		Params:           collections.NewItem(sb, types.ParamsKey, "params", codec.CollValue[types.Params](cdc)),
+		StateRoot:        collections.NewItem(sb, types.StateRootKey, "state_root", collections.StringValue),
+		DepositRecords:   collections.NewMap(sb, types.DepositRecordKey, "deposit_records", collections.StringKey, codec.CollValue[types.DepositRecord](cdc)),
+		WithdrawRecords:  collections.NewMap(sb, types.WithdrawRecordKey, "withdraw_records", collections.StringKey, codec.CollValue[types.WithdrawRecord](cdc)),
+		NullifierUsed:    collections.NewMap(sb, types.NullifierUsedKey, "nullifier_used", collections.StringKey, collections.BoolValue),
+		DepositProcessed: collections.NewMap(sb, types.DepositProcessedKey, "deposit_processed", collections.StringKey, collections.BoolValue),
+		BatchRecords:     collections.NewMap(sb, types.BatchRecordKey, "batch_records", collections.StringKey, codec.CollValue[types.BatchRecord](cdc)),
 	}
 
 	schema, err := sb.Build()
@@ -159,11 +160,31 @@ func (k Keeper) IsNullifierUsed(ctx context.Context, nullifier string) (bool, er
 
 // DepositProcessed methods
 func (k Keeper) SetDepositProcessed(ctx context.Context, depositId string) error {
-	return k.DepositProcessed.Set(ctx, depositId, true)
+	if err := k.DepositProcessed.Set(ctx, depositId, true); err != nil {
+		return err
+	}
+
+	record, err := k.GetDepositRecord(ctx, depositId)
+	if err != nil {
+		if errors.Is(err, collections.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+
+	record.Processed = true
+	return k.SetDepositRecord(ctx, depositId, record)
 }
 
 func (k Keeper) IsDepositProcessed(ctx context.Context, depositId string) (bool, error) {
-	return k.DepositProcessed.Get(ctx, depositId)
+	processed, err := k.DepositProcessed.Get(ctx, depositId)
+	if err != nil {
+		if errors.Is(err, collections.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return processed, nil
 }
 
 // BatchRecord methods

@@ -55,11 +55,19 @@ func (q queryServer) DepositRecord(ctx context.Context, req *types.QueryDepositR
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
+	if req.DepositId == "" {
+		return nil, status.Error(codes.InvalidArgument, "deposit id cannot be empty")
+	}
 
 	record, err := q.k.GetDepositRecord(ctx, req.DepositId)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "deposit record not found")
 	}
+	processed, err := q.k.IsDepositProcessed(ctx, req.DepositId)
+	if err != nil {
+		return nil, err
+	}
+	record.Processed = processed
 	return &types.QueryDepositRecordResponse{Record: &record}, nil
 }
 
@@ -90,6 +98,9 @@ func (q queryServer) NullifierUsed(ctx context.Context, req *types.QueryNullifie
 func (q queryServer) DepositProcessed(ctx context.Context, req *types.QueryDepositProcessedRequest) (*types.QueryDepositProcessedResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+	if req.DepositId == "" {
+		return nil, status.Error(codes.InvalidArgument, "deposit id cannot be empty")
 	}
 
 	processed, err := q.k.IsDepositProcessed(ctx, req.DepositId)

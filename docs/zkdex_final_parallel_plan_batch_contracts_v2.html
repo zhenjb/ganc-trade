@@ -1,0 +1,588 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ZKDEX MVP — Flow, Batch Contracts, Role Tasks</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,Arial,sans-serif;background:#fff;color:#20242a;padding:18px}
+.w{max-width:1240px}
+h1{font-size:22px;margin-bottom:4px}
+.sub{font-size:13px;color:#667085;line-height:1.6;margin-bottom:16px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+button{border:1px solid #d0d7de;background:#f6f8fa;color:#57606a;border-radius:999px;padding:6px 13px;font-size:12px;cursor:pointer}
+button.on{background:#ddf4ff;border-color:#54aeef;color:#0969da;font-weight:700}
+.panel{display:none}.panel.on{display:block}
+.card{border:1px solid #d8dee4;border-radius:12px;background:#f6f8fa;padding:13px;margin-bottom:12px}
+.card.core{border-left:4px solid #0969da}.card.warn{border-left:4px solid #b42318;background:#fff1f0}
+.card.ok{border-left:4px solid #2f7d32;background:#edf7ed}.card.zk{border-left:4px solid #8B5CF6;background:#faf7ff}
+.card.off{border-left:4px solid #D97706;background:#fff8ed}.card.ui{border-left:4px solid #5DCAA5;background:#f0fff8}
+.title{font-size:14px;font-weight:800;margin-bottom:6px}
+.txt{font-size:12px;color:#57606a;line-height:1.65}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;background:#eef1f4;border-radius:4px;padding:1px 5px;color:#24292f}
+pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0d1117;color:#e6edf3;padding:12px;border-radius:10px;overflow:auto;font-size:11px;line-height:1.45;margin-top:8px}
+pre code{background:transparent!important;color:#e6edf3!important;padding:0!important;border-radius:0!important;font-size:11px!important}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.flow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0 14px}
+.node{border:1px solid #d0d7de;border-radius:10px;padding:10px 12px;background:#fff;font-size:12px;font-weight:800;text-align:center;min-width:145px}
+.node.user{border-color:#5DCAA5;background:#E1F5EE;color:#085041}.node.off{border-color:#D97706;background:#FAEEDA;color:#633806}
+.node.zk{border-color:#8B5CF6;background:#F3F0FF;color:#3B0764}.node.on{border-color:#6B46C1;background:#EEEDFE;color:#26215C}
+.node.bank{border-color:#2F74C0;background:#E7F0FF;color:#0B3A75}
+.arrow{font-size:20px;color:#667085}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:12px;margin-bottom:14px}
+th,td{border:1px solid #d8dee4;padding:8px;vertical-align:top;text-align:left}
+th{background:#f6f8fa;font-size:11px;color:#57606a;text-transform:uppercase;letter-spacing:.25px}
+td ul{padding-left:16px;margin:0}
+td li{margin-bottom:4px}
+.badge{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;white-space:nowrap}
+.p0{background:#fee4e2;color:#b42318}.p1{background:#fef0c7;color:#93370d}.p2{background:#d1e9ff;color:#175cd3}
+.role{font-weight:800;color:#101828}
+.small{font-size:11px;color:#667085;line-height:1.55}
+.section{font-size:12px;font-weight:800;color:#667085;margin:16px 0 8px;border-bottom:1px solid #d8dee4;padding-bottom:5px}
+.kv{display:grid;grid-template-columns:210px 1fr;gap:0;border:1px solid #d8dee4;border-radius:10px;overflow:hidden;background:#fff;margin-bottom:10px}
+.kv div{padding:8px;border-bottom:1px solid #d8dee4;font-size:12px}
+.kv div:nth-child(odd){background:#f6f8fa;color:#57606a;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}
+.kv div:nth-last-child(-n+2){border-bottom:none}
+.okt{color:#2f7d32;font-weight:800}.badt{color:#b42318;font-weight:800}.muted{color:#667085}
+@media(max-width:900px){.grid,.grid3{grid-template-columns:1fr}.node{min-width:115px}.kv{grid-template-columns:1fr}}
+</style>
+
+<div class="w">
+<h1>ZKDEX MVP — Flow, Batch Contracts, Role Tasks</h1>
+<div class="sub">
+Scope locked for the team: <b>Deposit + real ZK proof + SubmitBatchProof + Claim Withdrawal + Frontend demo</b>.
+Order matching is optional/future work. This file is meant to let 5 people develop in parallel without waiting for each other.
+</div>
+
+<div class="tabs">
+<button class="on" onclick="go(0)">0. Flow</button>
+<button onclick="go(1)">1. Agreements</button>
+<button onclick="go(2)">P1 Cosmos</button>
+<button onclick="go(3)">P2 ZK</button>
+<button onclick="go(4)">P3 State/Batch</button>
+<button onclick="go(5)">P4 Backend/Relayer</button>
+<button onclick="go(6)">P5 Frontend/Survey</button>
+</div>
+
+<!-- TAB 0 FLOW -->
+<div class="panel on" id="p0">
+  <div class="card core">
+    <div class="title">MVP flow — what the final product must demonstrate</div>
+    <div class="flow">
+      <div class="node user">User<br><span class="small">Alice</span></div><div class="arrow">→</div>
+      <div class="node on">MsgDeposit<br><span class="small">lock 100</span></div><div class="arrow">→</div>
+      <div class="node bank">x/bank<br><span class="small">User → module account</span></div><div class="arrow">→</div>
+      <div class="node off">Index deposit<br><span class="small">dep-1 pending</span></div><div class="arrow">→</div>
+      <div class="node off">Build batch<br><span class="small">deposits[] + withdrawals[]</span></div><div class="arrow">→</div>
+      <div class="node zk">Generate proof<br><span class="small">real ZK</span></div><div class="arrow">→</div>
+      <div class="node on">SubmitBatchProof<br><span class="small">update + proof</span></div><div class="arrow">→</div>
+      <div class="node on">ClaimWithdraw<br><span class="small">release 40</span></div>
+    </div>
+    <div class="txt">
+      The off-chain side proposes a <code>SettlementUpdate</code>. The prover creates a real <code>ProofBundle</code>.
+      The relayer submits both together as <code>MsgSubmitBatchProof(settlementUpdate, proofBundle)</code>.
+      <code>x/zkdex</code> applies the update only if proof verification succeeds.
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card ok">
+      <div class="title">Money flow</div>
+      <div class="kv">
+        <div>Deposit</div><div><code>User account → zkdex module account</code> via <code>x/bank</code></div>
+        <div>Claim withdrawal</div><div><code>zkdex module account → user/destination</code> via <code>x/bank</code></div>
+        <div>Important</div><div><code>x/bank</code> is the transfer mechanism, not where money is “stored”. Custody is the <code>zkdex module account</code>.</div>
+      </div>
+    </div>
+    <div class="card ok">
+      <div class="title">State flow</div>
+      <div class="kv">
+        <div>Deposit tx</div><div>Creates <code>DepositRecord{processed:false}</code>; does not update <code>currentStateRoot</code>.</div>
+        <div>Submit proof</div><div>If proof is valid: update <code>currentStateRoot</code>, mark <code>depositProcessed</code>, mark <code>nullifierUsed</code>, create <code>WithdrawRecord</code>.</div>
+        <div>Claim tx</div><div>Only updates <code>WithdrawRecord.claimed=true</code> and transfers money. It does not change the ZK root.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card warn">
+    <div class="title">Not in this MVP</div>
+    <div class="txt">No orderbook/matching in the required path. Deposit/withdraw validates the ZK settlement core. Mock data may contain one deposit and one withdrawal, but the batch schema must already support deposits[] and withdrawals[].</div>
+  </div>
+</div>
+
+<!-- TAB 1 AGREEMENTS -->
+<div class="panel" id="p1">
+  <div class="card core">
+    <div class="title">Agreements that must be locked before parallel development</div>
+    <table>
+      <thead><tr><th>Agreement</th><th>Locked decision</th><th>Who depends on it</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td>Core scope</td><td>Deposit + real ZK proof + withdraw claim. Order matching optional.</td><td>Everyone</td><td>Prevents scope drift.</td></tr>
+        <tr><td>Submit rule</td><td>One tx: <code>MsgSubmitBatchProof(settlementUpdate, proofBundle)</code></td><td>P1, P2, P3, P4, P5</td><td>Proof and update are not separate submissions.</td></tr>
+        <tr><td>On-chain state</td><td><code>currentStateRoot</code>, <code>DepositRecord</code>, <code>depositProcessed</code>, <code>nullifierUsed</code>, <code>WithdrawRecord</code>, optional <code>BatchRecord</code></td><td>P1, P3, P4, P5</td><td>Defines what the chain owns.</td></tr>
+        <tr><td>Custody</td><td>Coins are held in <code>zkdex module account</code>; movement uses <code>x/bank</code>.</td><td>P1, P4, P5</td><td>Clarifies deposit/withdraw money flow.</td></tr>
+        <tr><td>ZK proof</td><td>Final defense must use real proof, not mock. Mock is allowed only during integration.</td><td>P1, P2, P4</td><td>ZK is the core of the product.</td></tr>
+        <tr><td>Test vector</td><td>Alice starts with 1000, deposits 100, withdraws 40, final chain balance after claim = 940, module account = 60.</td><td>Everyone</td><td>Single shared scenario for all tests/UI/demo.</td></tr>
+        <tr><td>Encoding</td><td>Amounts are strings in API/JSON. Roots/nullifiers/proofs/commitment roots are hex strings. Public input order is fixed as oldStateRoot, newStateRoot, depositsRoot, withdrawalsRoot, nullifiersRoot, withdrawOutputsRoot.</td><td>P2, P3, P4, P1</td><td>Prevents proof/input mismatch.</td></tr>
+        <tr><td>Batch shape</td><td>Use <code>deposits[]</code>, <code>withdrawals[]</code>, <code>withdrawRecords[]</code>, and <code>witness.accounts[]</code>. Mock data can use one item, but schema must support many.</td><td>Everyone</td><td>Prevents FE/P2/P3/P4 contract rewrites later.</td></tr>
+        <tr><td>Batch commitments</td><td>Add <code>BatchCommitments{depositsRoot, withdrawalsRoot, nullifiersRoot, withdrawOutputsRoot}</code> to batch build, proof generation, and batch submit.</td><td>P1, P2, P3, P4</td><td>Allows proof public inputs to bind whole arrays instead of scalar demo fields.</td></tr>
+        <tr><td>Naming</td><td>Use <code>destination</code> and <code>destinationHash</code>. Do not use <code>withdrawAddress</code> / <code>withdrawAddressHash</code>.</td><td>P2, P3, P4, P5</td><td>Avoids schema drift.</td></tr>
+        <tr><td>Balances</td><td>Use <code>{userBalances,moduleAccountBalance}</code> everywhere. Do not use flat <code>moduleAccount/uusdc</code> maps in claim responses.</td><td>P4, P5</td><td>Keeps claim response aligned with <code>GET /api/state</code>.</td></tr>
+        <tr><td>Error response</td><td>All errors use <code>{"error":"message"}</code>.</td><td>P4, P5</td><td>Simple stable FE error handling.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card warn">
+    <div class="title">Mock contract rule</div>
+    <div class="txt">Mock data may contain one deposit and one withdrawal, but the schema must not be simplified. Batch-related contracts must use arrays and commitment roots from the start.</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="title">DepositRecord</div>
+<pre><code>{
+  "depositId": "dep-1",
+  "owner": "cosmos1alice...",
+  "denom": "uusdc",
+  "amount": "100",
+  "processed": false,
+  "createdHeight": 12345
+}</code></pre>
+    </div>
+    <div class="card">
+      <div class="title">WithdrawRequest</div>
+<pre><code>{
+  "withdrawId": "wd-1",
+  "owner": "cosmos1alice...",
+  "denom": "uusdc",
+  "amount": "40",
+  "destination": "cosmos1alice...",
+  "nonce": "1",
+  "signature": "0x..."
+}</code></pre>
+    </div>
+    <div class="card">
+      <div class="title">SettlementUpdate — batch-shaped</div>
+<pre><code>{
+  "batchId": "batch-1",
+  "oldStateRoot": "0xrootA",
+  "newStateRoot": "0xrootB",
+  "deposits": [
+    {
+      "depositId": "dep-1",
+      "owner": "cosmos1alice",
+      "denom": "uusdc",
+      "amount": "100"
+    }
+  ],
+  "withdrawals": [
+    {
+      "withdrawId": "wd-1",
+      "owner": "cosmos1alice",
+      "denom": "uusdc",
+      "amount": "40",
+      "destination": "cosmos1alice",
+      "destinationHash": "0xmockdestinationhash",
+      "nullifier": "0xmocknullifier"
+    }
+  ]
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="title">BatchCommitments</div>
+<pre><code>{
+  "depositsRoot": "0xdepositsRoot",
+  "withdrawalsRoot": "0xwithdrawalsRoot",
+  "nullifiersRoot": "0xnullifiersRoot",
+  "withdrawOutputsRoot": "0xwithdrawOutputsRoot"
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="title">Witness — batch-shaped</div>
+<pre><code>{
+  "accounts": [
+    {
+      "owner": "cosmos1alice",
+      "userSecret": "mock-user-secret",
+      "nonce": "1",
+      "oldBalance": "0",
+      "newBalance": "60"
+    }
+  ]
+}</code></pre>
+    </div>
+    <div class="card">
+      <div class="title">ProofBundle</div>
+<pre><code>{
+  "proof": "0xmockproof",
+  "publicInputs": [
+    "0xrootA",
+    "0xrootB",
+    "0xdepositsRoot",
+    "0xwithdrawalsRoot",
+    "0xnullifiersRoot",
+    "0xwithdrawOutputsRoot"
+  ],
+  "verificationKeyId": "v1"
+}</code></pre>
+    </div>
+    <div class="card">
+      <div class="title">WithdrawRecord</div>
+<pre><code>{
+  "withdrawId": "wd-1",
+  "owner": "cosmos1alice...",
+  "denom": "uusdc",
+  "amount": "40",
+  "destination": "cosmos1alice...",
+  "nullifier": "0x...",
+  "claimed": false
+}</code></pre>
+    </div>
+    <div class="card zk">
+      <div class="title">ZK I/O contract</div>
+<pre><code>publicInputs[0] = oldStateRoot
+publicInputs[1] = newStateRoot
+publicInputs[2] = depositsRoot
+publicInputs[3] = withdrawalsRoot
+publicInputs[4] = nullifiersRoot
+publicInputs[5] = withdrawOutputsRoot
+
+Private witness:
+- accounts[]
+- each account has owner, userSecret, nonce, oldBalance, newBalance
+
+Naming rule:
+- use destination / destinationHash
+- do not use withdrawAddress / withdrawAddressHash</code></pre>
+    </div>
+  </div>
+
+  <div class="card core">
+    <div class="title">REST API agreements — locked contracts for FE ↔ Backend</div>
+    <table>
+      <thead><tr><th>Endpoint</th><th>Locked input</th><th>Locked output</th><th>Primary owner</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /api/state</code></td><td><code>none</code></td><td><code>{mode,currentStateRoot,userBalances,moduleAccountBalance,latestDeposit,latestWithdrawRequest,latestSettlement,latestBatchCommitments,latestProof,latestWithdrawRecords,proofStatus,depositStatus,withdrawStatus,batchStatus}</code></td><td>P4</td></tr>
+        <tr><td><code>POST /api/deposit</code></td><td><code>{owner,denom,amount}</code></td><td><code>{txHash,depositRecord,state}</code></td><td>P4 → P1</td></tr>
+        <tr><td><code>POST /api/withdraw-request</code></td><td><code>{owner,denom,amount,destination}</code></td><td><code>{withdrawRequest,state}</code></td><td>P4/P3</td></tr>
+        <tr><td><code>POST /api/batch/build</code></td><td><code>{depositIds[],withdrawIds[]}</code></td><td><code>{settlementUpdate,batchCommitments,witness,state}</code></td><td>P3 via P4</td></tr>
+        <tr><td><code>POST /api/proof/generate</code></td><td><code>{settlementUpdate,batchCommitments,witness}</code></td><td><code>{proofBundle,state}</code></td><td>P2 via P4</td></tr>
+        <tr><td><code>POST /api/batch/submit</code></td><td><code>{settlementUpdate,batchCommitments,proofBundle}</code></td><td><code>{txHash,accepted,proofStatus,settlementUpdate,batchCommitments,withdrawRecords[],state}</code></td><td>P4 → P1</td></tr>
+        <tr><td><code>POST /api/withdraw/claim</code></td><td><code>{withdrawId}</code></td><td><code>{txHash,withdrawRecord,balances,state}</code></td><td>P4 → P1</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="title">GET /api/state output</div>
+<pre><code>{
+  "mode": "mock",
+  "currentStateRoot": "0xrootA",
+  "userBalances": {
+    "cosmos1alice/uusdc": "1000"
+  },
+  "moduleAccountBalance": {
+    "uusdc": "0"
+  },
+  "latestDeposit": null,
+  "latestWithdrawRequest": null,
+  "latestSettlement": null,
+  "latestBatchCommitments": null,
+  "latestProof": null,
+  "latestWithdrawRecords": null,
+  "proofStatus": "idle",
+  "depositStatus": "none",
+  "withdrawStatus": "none",
+  "batchStatus": "none"
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="title">POST /api/batch/build</div>
+<pre><code>// input
+{
+  "depositIds": ["dep-1"],
+  "withdrawIds": ["wd-1"]
+}
+
+// output
+{
+  "settlementUpdate": { "...batch-shaped SettlementUpdate..." },
+  "batchCommitments": { "...BatchCommitments..." },
+  "witness": { "...batch-shaped Witness..." },
+  "state": {
+    "batchStatus": "built",
+    "proofStatus": "idle",
+    "withdrawStatus": "batchBuilt"
+  }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="title">POST /api/proof/generate</div>
+<pre><code>// input
+{
+  "settlementUpdate": { "...": "..." },
+  "batchCommitments": { "...": "..." },
+  "witness": { "...": "..." }
+}
+
+// output
+{
+  "proofBundle": {
+    "proof": "0xmockproof",
+    "publicInputs": [
+      "0xrootA",
+      "0xrootB",
+      "0xdepositsRoot",
+      "0xwithdrawalsRoot",
+      "0xnullifiersRoot",
+      "0xwithdrawOutputsRoot"
+    ],
+    "verificationKeyId": "v1"
+  },
+  "state": {
+    "proofStatus": "ready"
+  }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="title">POST /api/batch/submit</div>
+<pre><code>// input
+{
+  "settlementUpdate": { "...": "..." },
+  "batchCommitments": { "...": "..." },
+  "proofBundle": { "...": "..." }
+}
+
+// output
+{
+  "txHash": "0xmocksubmitbatch",
+  "accepted": true,
+  "proofStatus": "accepted",
+  "settlementUpdate": { "...": "..." },
+  "batchCommitments": { "...": "..." },
+  "withdrawRecords": [
+    {
+      "withdrawId": "wd-1",
+      "owner": "cosmos1alice",
+      "denom": "uusdc",
+      "amount": "40",
+      "destination": "cosmos1alice",
+      "nullifier": "0xmocknullifier",
+      "claimed": false
+    }
+  ],
+  "state": {
+    "currentStateRoot": "0xrootB",
+    "depositStatus": "processed",
+    "proofStatus": "accepted",
+    "withdrawStatus": "readyToClaim",
+    "batchStatus": "accepted"
+  }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="title">POST /api/withdraw/claim</div>
+<pre><code>// input
+{
+  "withdrawId": "wd-1"
+}
+
+// output
+{
+  "txHash": "0xmockclaimwithdraw",
+  "withdrawRecord": {
+    "withdrawId": "wd-1",
+    "owner": "cosmos1alice",
+    "denom": "uusdc",
+    "amount": "40",
+    "destination": "cosmos1alice",
+    "nullifier": "0xmocknullifier",
+    "claimed": true
+  },
+  "balances": {
+    "userBalances": {
+      "cosmos1alice/uusdc": "940"
+    },
+    "moduleAccountBalance": {
+      "uusdc": "60"
+    }
+  },
+  "state": {
+    "withdrawStatus": "claimed"
+  }
+}</code></pre>
+    </div>
+
+    <div class="card zk">
+      <div class="title">Locked status enums</div>
+<pre><code>depositStatus:
+- none
+- locked
+- indexed
+- processed
+
+withdrawStatus:
+- none
+- requested
+- batchBuilt
+- readyToClaim
+- claimed
+- rejected
+
+proofStatus:
+- idle
+- generating
+- ready
+- submitting
+- accepted
+- rejected
+
+batchStatus:
+- none
+- built
+- submitted
+- accepted
+- rejected</code></pre>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ROLE TABS TEMPLATE DATA AS TABLES -->
+<div class="panel" id="p2">
+  <div class="card on">
+    <div class="title">P1 — Cosmos / x/zkdex module</div>
+    <div class="txt">Owns on-chain custody, settlement verification, compact state, and withdrawal claim. P1 can start with a fake verifier while P2 builds the real verifier, but final defense must use real verification.</div>
+  </div>
+  <table>
+    <thead><tr><th>Task</th><th>Input</th><th>Input from</th><th>Processing</th><th>Output</th><th>Output to</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td>ONCHAIN-01 Scaffold <code>x/zkdex</code></td><td>Cosmos SDK app/repo</td><td>Existing codebase</td><td>Create module, keeper, msg server, query server, genesis wiring</td><td>Compilable module</td><td>P4 for tx/query integration</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-02 Module account</td><td>module name <code>zkdex</code></td><td>Agreements</td><td>Register/use module account for custody</td><td>Queryable module account address/balance</td><td>P4, P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-03 Genesis root</td><td>initial root</td><td>P3/P2 test vector</td><td>Initialize <code>currentStateRoot</code></td><td>QueryCurrentStateRoot returns initial root</td><td>P3, P4, P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-04 Store records</td><td>schemas</td><td>Agreements</td><td>Implement KV storage for deposit, withdraw, nullifier, processed deposit, optional batch</td><td>State getters/setters</td><td>P1 messages, P4 queries</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-05 <code>MsgDeposit</code></td><td><code>creator, denom, amount</code></td><td>P4/API or CLI</td><td>Validate amount/denom; call <code>x/bank.SendCoinsFromAccountToModule</code>; create <code>DepositRecord</code>; emit event</td><td><code>DepositRecord{processed:false}</code>; module balance +amount</td><td>P4 indexer, P5 UI, P3 batcher</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-06 Deposit queries</td><td><code>depositId</code></td><td>P4/P5</td><td>Return deposit record and processed status</td><td><code>DepositRecord</code></td><td>P4, P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-07 Verifier interface</td><td><code>VerifyProof(update, proofBundle) bool</code></td><td>P2</td><td>Add verifier adapter; allow temporary stub behind same interface</td><td>Verifier callable inside MsgSubmitBatchProof</td><td>P1 SubmitBatchProof</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-08 <code>MsgSubmitBatchProof</code> validation</td><td><code>settlementUpdate, proofBundle</code></td><td>P4 relayer; P2/P3 formats</td><td>Check old root, unprocessed deposit, unused nullifier; derive commitment-based public inputs; verify proof</td><td>Accept/reject decision</td><td>P4, P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-09 Apply settlement update</td><td>valid update + proof</td><td>ONCHAIN-08</td><td>Set new root, mark deposits processed, mark nullifiers used, create withdrawRecords[], emit event</td><td>Updated compact state</td><td>P4, P5, report screenshots</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-10 <code>MsgClaimWithdraw</code></td><td><code>withdrawId</code>, signer</td><td>P4/P5</td><td>Check record exists and not claimed; call <code>x/bank.SendCoinsFromModuleToAccount</code>; mark claimed</td><td>User receives funds; <code>claimed=true</code></td><td>P4, P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-11 State queries</td><td>root/nullifier/withdrawId/denom</td><td>P4/P5</td><td>Implement queries for root, nullifier, withdraw record, module balance</td><td>Stable query responses</td><td>P4 backend, P5 UI</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ONCHAIN-12 Failure tests</td><td>invalid proof, duplicate nullifier, claim twice</td><td>P2/P3/P4 test vectors</td><td>Write unit/integration tests</td><td>Rejects invalid cases</td><td>Report/demo evidence</td><td><span class="badge p1">P1</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card zk">
+    <div class="title">P2 — ZK circuit / prover / verifier</div>
+    <div class="txt">Owns the real proof path. This is non-negotiable for final defense. P2 works from fixed JSON test vectors produced by P3 and agreed public input order.</div>
+  </div>
+  <table>
+    <thead><tr><th>Task</th><th>Input</th><th>Input from</th><th>Processing</th><th>Output</th><th>Output to</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td>ZK-01 Choose stack</td><td>Go/Cosmos requirement</td><td>Team</td><td>Choose gnark/Groth16 or final ZK stack; document reason</td><td>ZK stack decision</td><td>Team/report</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-02 Lock encoding</td><td>batch-shaped schemas, commitment roots, nullifier fields</td><td>Agreements, P3</td><td>Define field conversion, hex format, public input order, hash function</td><td><code>zk_io.md</code></td><td>P1, P3, P4</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-03 Circuit skeleton</td><td>ZK stack decision</td><td>ZK-01</td><td>Create circuit project and compile empty/basic circuit</td><td>Circuit builds</td><td>P2 internal</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-04 Balance transition constraint</td><td><code>accounts[], depositsRoot, withdrawalsRoot, old/new balances</code></td><td>P3 witness</td><td>Prove account balance transitions represented by witness.accounts[] and insufficient balance fails</td><td>Balance constraint</td><td>P2 proof generation</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-05 Nullifier constraint</td><td><code>userSecret, nonce, nullifier</code></td><td>P3 witness/update</td><td>Prove <code>nullifier = Hash(userSecret, nonce)</code></td><td>Nullifier bound to witness</td><td>P1 verifier, P3 vector</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-06 State root constraint</td><td>old/new state values</td><td>P3</td><td>Prove root update for simplified MVP state model</td><td>Root bound to proof</td><td>P1, P3, P4</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-07 Withdraw address hash binding</td><td><code>withdrawAddressHash</code></td><td>P3 update</td><td>Ensure proof binds withdrawal output address hash</td><td>Tampered destination fails</td><td>P1/P4 tests</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-08 Generate keys</td><td>final circuit</td><td>ZK-03..07</td><td>Generate proving key and verifying key</td><td><code>proving.key</code>, <code>verifying.key</code></td><td>P2/P1</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-09 Generate proof</td><td><code>settlementUpdate.json</code>, <code>batch_commitments.json</code>, <code>witness.json</code></td><td>P3</td><td>Run prover on Alice 100/40 canonical vector using batch-shaped update + commitments</td><td><code>proofBundle.json</code></td><td>P4 relayer, P1 verifier</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-10 Verifier function</td><td><code>settlementUpdate</code>, <code>proofBundle</code></td><td>P3/P4</td><td>Verify proof against public inputs derived from update</td><td><code>VerifyProof(update, proofBundle) bool</code></td><td>P1 chain module, P4 tests</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-11 Serialization</td><td>proof object, public inputs</td><td>ZK-09</td><td>Serialize to bytes/hex/base64 compatible with chain/backend</td><td>Stable proof format</td><td>P1, P4</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>ZK-12 Negative tests</td><td>invalid amount/root/nullifier/address</td><td>P3 failure vectors</td><td>Verify should fail after tampering</td><td>Failure test results</td><td>Team/report/demo</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td>ZK-13 Benchmark</td><td>valid proof</td><td>ZK-09</td><td>Measure proof generation and verification time</td><td>Numbers for report</td><td>Report/slides</td><td><span class="badge p2">P2</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="panel" id="p4">
+  <div class="card off">
+    <div class="title">P3 — Off-chain state / batch builder</div>
+    <div class="txt">Owns the deterministic transition from deposit + withdrawal request into <code>SettlementUpdate</code> and <code>witness</code>. P3 is the bridge between on-chain records and ZK proof generation.</div>
+  </div>
+  <table>
+    <thead><tr><th>Task</th><th>Input</th><th>Input from</th><th>Processing</th><th>Output</th><th>Output to</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td>STATE-01 Define shared structs</td><td>locked schemas</td><td>Agreements</td><td>Create Go/TS/JSON structs for deposit, withdraw request, update, witness, batch</td><td>Shared type definitions</td><td>P2, P4, P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-02 Initial local state</td><td>Alice test vector</td><td>Agreements</td><td>Initialize local off-chain balance and initial root</td><td><code>rootA</code>, balance 0</td><td>P2, P4, P1 genesis if needed</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-03 Apply deposit</td><td><code>DepositRecord{dep-1, amount=100}</code></td><td>P1/P4</td><td>Credit local off-chain balance and compute new pending root</td><td>balance 100, root after deposit</td><td>P3 batch, P2 witness</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-04 Create withdraw request</td><td>owner, denom, amount 40, destination</td><td>P4/P5</td><td>Validate amount, assign nonce, create request</td><td><code>WithdrawRequest</code></td><td>P3 batch, P4 API</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-05 Apply withdrawal</td><td>balance 100, withdraw amount 40</td><td>STATE-03/04</td><td>Debit balance, increment nonce, compute new state root</td><td>balance 60, <code>newStateRoot</code></td><td>P2, P4</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-06 Compute nullifier</td><td><code>userSecret, nonce</code></td><td>Test vector / request</td><td>Hash using same function as circuit</td><td><code>nullifier</code></td><td>P2, P1, P4</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-07 Compute withdraw address hash</td><td><code>destination</code></td><td>WithdrawRequest</td><td>Hash destination using agreed encoding</td><td><code>withdrawAddressHash</code></td><td>P2, P1</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-08 Build <code>SettlementUpdate</code></td><td>roots, deposits[], withdrawals[], nullifiers[], destinationHash values</td><td>STATE-03..07</td><td>Assemble batch-shaped canonical update object</td><td><code>settlementUpdate.json</code></td><td>P2 prover, P4 relayer, P1 verifier</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-09 Build witness</td><td>accounts[], secrets, nonces, old/new balances, state values</td><td>STATE-05/06</td><td>Assemble private witness in circuit format</td><td><code>witness.json</code></td><td>P2 prover</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-10 Public input builder</td><td><code>SettlementUpdate</code></td><td>STATE-08</td><td>Convert update + BatchCommitments to ordered public input list</td><td><code>public_inputs.json</code></td><td>P2, P1</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-11 Canonical test vector folder</td><td>Alice 100/40 scenario</td><td>Agreements</td><td>Save all JSON files in one folder</td><td><code>/zk/testvectors/alice_100_40/*</code></td><td>Everyone</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>STATE-12 Failure vectors</td><td>canonical vector</td><td>STATE-11</td><td>Create over-withdraw, wrong root, duplicate nullifier, tampered address cases</td><td>negative JSON vectors</td><td>P1, P2, P4</td><td><span class="badge p1">P1</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="panel" id="p5">
+  <div class="card off">
+    <div class="title">P4 — Backend / relayer / integration</div>
+    <div class="txt">Owns the glue: REST API, chain calls, indexer/querying, prover call, relayer submit, end-to-end scripts. P4 should expose stable endpoints early with stubs, then connect real modules later.</div>
+  </div>
+  <table>
+    <thead><tr><th>Task</th><th>Input</th><th>Input from</th><th>Processing</th><th>Output</th><th>Output to</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td>INT-01 Backend skeleton</td><td>REST contracts</td><td>Agreements</td><td>Create server, route structure, response format</td><td>Running backend</td><td>P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-02 Mock endpoints</td><td>canonical test vector</td><td>P3</td><td>Return stable fake responses matching contracts</td><td>Frontend can start immediately</td><td>P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-03 Chain client setup</td><td>RPC/GRPC/local chain config</td><td>P1</td><td>Connect to local chain and sign txs</td><td>Chain client ready</td><td>P4 internal</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-04 <code>POST /api/deposit</code></td><td><code>{owner, denom, amount}</code></td><td>P5</td><td>Submit <code>MsgDeposit</code>, then query/index record</td><td><code>{txHash, depositRecord}</code></td><td>P5, P3</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-05 Deposit indexer/query</td><td>deposit event or depositId</td><td>P1 chain</td><td>Read pending deposit and convert to local mirror</td><td><code>DepositRecord</code></td><td>P3 batch builder, P5 UI</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-06 <code>POST /api/withdraw-request</code></td><td>owner, denom, amount, destination</td><td>P5</td><td>Create request or call P3 request builder</td><td><code>{withdrawRequest}</code></td><td>P3, P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-07 <code>POST /api/batch/build</code></td><td>depositIds[], withdrawIds[] or request IDs</td><td>P5/API</td><td>Call P3 batch builder</td><td><code>{settlementUpdate, batchCommitments, witness}</code></td><td>P5, P2</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-08 <code>POST /api/proof/generate</code></td><td>settlementUpdate + batchCommitments + witness</td><td>P3/P5</td><td>Call P2 prover</td><td><code>{proofBundle}</code></td><td>P5, INT-09</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-09 <code>POST /api/batch/submit</code></td><td>settlementUpdate + batchCommitments + proofBundle</td><td>P5/INT-08</td><td>Submit <code>MsgSubmitBatchProof</code> to chain</td><td><code>{txHash, accepted, proofStatus, settlementUpdate, batchCommitments, withdrawRecords[], state}</code></td><td>P5, report</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-10 <code>POST /api/withdraw/claim</code></td><td><code>withdrawId</code></td><td>P5</td><td>Submit <code>MsgClaimWithdraw</code>, query balances/record</td><td><code>{txHash, withdrawRecord, balances}</code></td><td>P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-11 <code>GET /api/state</code></td><td>none</td><td>P5</td><td>Query root, balances, deposit/withdraw statuses</td><td>Dashboard state JSON</td><td>P5</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>INT-12 End-to-end script</td><td>local chain + APIs</td><td>P1/P2/P3</td><td>Run deposit → build → prove → submit → claim</td><td>One-command demo with tx hashes</td><td>Team/report</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td>INT-13 Failure demo endpoints/scripts</td><td>negative vectors</td><td>P3/P2</td><td>Submit invalid proof, duplicate nullifier, claim twice</td><td>Rejected-case evidence</td><td>P5/report</td><td><span class="badge p1">P1</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="panel" id="p6">
+  <div class="card ui">
+    <div class="title">P5 — Frontend / survey demo</div>
+    <div class="txt">Owns the product surface and user evaluation. P5 should build against mock API responses first, then connect to real backend. The UI must make deposit/proof/claim understandable to non-experts.</div>
+  </div>
+  <table>
+    <thead><tr><th>Task</th><th>Input</th><th>Input from</th><th>Processing</th><th>Output</th><th>Output to</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td>FE-01 App shell</td><td>MVP flow</td><td>Agreements</td><td>Create Next.js/Tailwind app with tabs/steps</td><td>Dashboard shell</td><td>Team demo</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-02 API client</td><td>REST contract</td><td>P4/Agreements</td><td>Create typed fetch functions and status mapping</td><td><code>api.ts</code></td><td>P5 screens</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-03 Overview screen</td><td><code>GET /api/state</code></td><td>P4</td><td>Display root, module balance, user balance, latest statuses</td><td>Overview UI</td><td>Users/evaluation</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-04 Deposit screen</td><td><code>POST /api/deposit</code></td><td>P4</td><td>Form amount/denom, submit tx, display deposit record and locked funds</td><td>Deposit UI</td><td>Users/evaluation</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-05 Withdraw request screen</td><td><code>POST /api/withdraw-request</code></td><td>P4</td><td>Form withdraw amount/destination and show request</td><td>Withdraw request UI</td><td>Users/evaluation</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-06 Batch screen</td><td><code>POST /api/batch/build</code></td><td>P4/P3</td><td>Show old root, new root, deposits[], withdrawals[], nullifiers[], batch commitments</td><td>Batch visualization</td><td>Users/report screenshots</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-07 Proof screen</td><td><code>POST /api/proof/generate</code></td><td>P4/P2</td><td>Show proof generating/ready status and public inputs</td><td>Proof status UI</td><td>Users/evaluation</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-08 Submit proof screen</td><td><code>POST /api/batch/submit</code></td><td>P4/P1</td><td>Submit update + proof and show accepted/rejected, root update, processed/nullifier status</td><td>Settlement UI</td><td>Users/evaluation</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-09 Claim screen</td><td><code>POST /api/withdraw/claim</code></td><td>P4/P1</td><td>Show WithdrawRecord, claim button, final balances, claimed status</td><td>Claim UI</td><td>Users/evaluation</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-10 Failure demo panel</td><td>failure endpoints/results</td><td>P4/P1/P2</td><td>Display invalid proof rejected, duplicate nullifier rejected, claim twice rejected</td><td>Trust/safety demo panel</td><td>Users/report</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td>FE-11 Explanation panels</td><td>architecture text</td><td>Team</td><td>Write concise explanations: locked funds, proof, root, nullifier, claim</td><td>User-friendly guide in UI</td><td>Survey users</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-12 Survey form/link</td><td>survey questions</td><td>Team/report needs</td><td>Collect Likert + open feedback after demo</td><td>User evaluation data</td><td>Report</td><td><span class="badge p0">P0</span></td></tr>
+      <tr><td>FE-13 Screenshot pack</td><td>finished UI</td><td>P5</td><td>Capture deposit/proof/claim/failure screens</td><td>Report assets</td><td>Report/slides</td><td><span class="badge p1">P1</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+</div>
+<script>
+function go(i){
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('on',j===i));
+  document.querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',j===i));
+}
+</script>
