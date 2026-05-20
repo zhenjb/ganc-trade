@@ -20,6 +20,9 @@ service Msg {
 
   // Deposit defines an operation for depositing coins into the zkdex module.
   rpc Deposit(MsgDeposit) returns (MsgDepositResponse);
+
+  // SubmitBatchProof validates a settlement update and its proof bundle.
+  rpc SubmitBatchProof(MsgSubmitBatchProof) returns (MsgSubmitBatchProofResponse);
 }
 
 // MsgUpdateParams is the Msg/UpdateParams request type.
@@ -63,4 +66,61 @@ message MsgDeposit {
 message MsgDepositResponse {
   // deposit_record is the created deposit record.
   DepositRecord deposit_record = 1;
+}
+
+// SettlementDeposit is the deposit payload included in a settlement update.
+message SettlementDeposit {
+  string deposit_id = 1 [json_name = "depositId"];
+  string owner = 2;
+  string denom = 3;
+  string amount = 4;
+}
+
+// SettlementWithdrawal is the withdrawal payload included in a settlement update.
+message SettlementWithdrawal {
+  string withdraw_id = 1 [json_name = "withdrawId"];
+  string owner = 2;
+  string denom = 3;
+  string amount = 4;
+  string destination = 5;
+  string destination_hash = 6 [json_name = "destinationHash"];
+  string nullifier = 7;
+}
+
+// SettlementUpdate is the batch-shaped transition proposed by the relayer.
+message SettlementUpdate {
+  string batch_id = 1 [json_name = "batchId"];
+  string old_state_root = 2 [json_name = "oldStateRoot"];
+  string new_state_root = 3 [json_name = "newStateRoot"];
+  repeated SettlementDeposit deposits = 4;
+  repeated SettlementWithdrawal withdrawals = 5;
+}
+
+// BatchCommitments binds the settlement arrays to ordered verifier public inputs.
+message BatchCommitments {
+  string deposits_root = 1 [json_name = "depositsRoot"];
+  string withdrawals_root = 2 [json_name = "withdrawalsRoot"];
+  string nullifiers_root = 3 [json_name = "nullifiersRoot"];
+  string withdraw_outputs_root = 4 [json_name = "withdrawOutputsRoot"];
+}
+
+// MsgSubmitBatchProof is the Msg/SubmitBatchProof request type.
+message MsgSubmitBatchProof {
+  option (cosmos.msg.v1.signer) = "creator";
+  option (amino.name) = "ob/x/zkdex/MsgSubmitBatchProof";
+
+  // creator is the relayer submitting the settlement proof.
+  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+
+  SettlementUpdate settlement_update = 2 [(gogoproto.nullable) = false, json_name = "settlementUpdate"];
+  BatchCommitments batch_commitments = 3 [(gogoproto.nullable) = false, json_name = "batchCommitments"];
+
+  // proofBundle is the serialized proof payload produced by P2.
+  bytes proof_bundle = 4 [json_name = "proofBundle"];
+}
+
+// MsgSubmitBatchProofResponse returns the accept/reject decision for ONCHAIN-08.
+message MsgSubmitBatchProofResponse {
+  bool accepted = 1;
+  repeated string public_inputs = 2 [json_name = "publicInputs"];
 }

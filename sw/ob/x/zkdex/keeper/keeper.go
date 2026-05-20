@@ -33,6 +33,7 @@ type Keeper struct {
 
 	bankKeeper types.BankKeeper
 	authKeeper types.AuthKeeper
+	verifier   types.ProofVerifier
 }
 
 func NewKeeper(
@@ -43,12 +44,18 @@ func NewKeeper(
 
 	bankKeeper types.BankKeeper,
 	authKeeper types.AuthKeeper,
+	verifiers ...types.ProofVerifier,
 ) Keeper {
 	if _, err := addressCodec.BytesToString(authority); err != nil {
 		panic(fmt.Sprintf("invalid authority address %s: %s", authority, err))
 	}
 
 	sb := collections.NewSchemaBuilder(storeService)
+
+	verifier := types.ProofVerifier(types.RejectingProofVerifier{})
+	if len(verifiers) > 0 && verifiers[0] != nil {
+		verifier = verifiers[0]
+	}
 
 	k := Keeper{
 		storeService: storeService,
@@ -58,6 +65,7 @@ func NewKeeper(
 
 		bankKeeper:       bankKeeper,
 		authKeeper:       authKeeper,
+		verifier:         verifier,
 		Params:           collections.NewItem(sb, types.ParamsKey, "params", codec.CollValue[types.Params](cdc)),
 		StateRoot:        collections.NewItem(sb, types.StateRootKey, "state_root", collections.StringValue),
 		DepositRecords:   collections.NewMap(sb, types.DepositRecordKey, "deposit_records", collections.StringKey, codec.CollValue[types.DepositRecord](cdc)),
@@ -74,6 +82,21 @@ func NewKeeper(
 	k.Schema = schema
 
 	return k
+}
+
+func (k Keeper) WithProofVerifier(verifier types.ProofVerifier) Keeper {
+	if verifier == nil {
+		verifier = types.RejectingProofVerifier{}
+	}
+	k.verifier = verifier
+	return k
+}
+
+func (k Keeper) VerifyProof(update []byte, proofBundle []byte) bool {
+	if k.verifier == nil {
+		return false
+	}
+	return k.verifier.VerifyProof(update, proofBundle)
 }
 
 // GetAuthority returns the module's authority.
@@ -155,7 +178,14 @@ func (k Keeper) SetNullifierUsed(ctx context.Context, nullifier string) error {
 }
 
 func (k Keeper) IsNullifierUsed(ctx context.Context, nullifier string) (bool, error) {
-	return k.NullifierUsed.Get(ctx, nullifier)
+	used, err := k.NullifierUsed.Get(ctx, nullifier)
+	if err != nil {
+		if errors.Is(err, collections.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return used, nil
 }
 
 // DepositProcessed methods
