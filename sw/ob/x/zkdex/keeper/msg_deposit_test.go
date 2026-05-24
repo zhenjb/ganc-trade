@@ -36,13 +36,13 @@ func (m *MockBankKeeper) SendCoinsFromAccountToModule(ctx context.Context, sende
 }
 
 func (m *MockBankKeeper) SendCoinsFromModuleToAccount(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error {
-    // Basic mock logic: subtract coins from the tracked balance
-    m.escrowedCoins[recipientAddr.String()] = m.escrowedCoins[recipientAddr.String()].Sub(amt...)
-    return nil
+	// Basic mock logic: subtract coins from the tracked balance
+	m.escrowedCoins[recipientAddr.String()] = m.escrowedCoins[recipientAddr.String()].Sub(amt...)
+	return nil
 }
 
 func (m *MockBankKeeper) SpendableCoins(ctx context.Context, addr sdk.AccAddress) sdk.Coins {
-    return m.escrowedCoins[addr.String()]
+	return m.escrowedCoins[addr.String()]
 }
 
 // --- TEST FIXTURE ---
@@ -59,14 +59,14 @@ func initDepositFixture(t *testing.T) *depositFixture {
 	addressCodec := addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix())
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	storeService := runtime.NewKVStoreService(storeKey)
-	
+
 	ctx := testutil.DefaultContextWithDB(t, storeKey, storetypes.NewTransientStoreKey("transient_test")).Ctx
 	authority := authtypes.NewModuleAddress(types.GovModuleName)
 	mockBank := NewMockBankKeeper()
 
 	k := keeper.NewKeeper(storeService, encCfg.Codec, addressCodec, authority, mockBank, nil)
 	k.Params.Set(ctx, types.DefaultParams())
-	
+
 	return &depositFixture{
 		ctx:          ctx,
 		keeper:       k,
@@ -147,7 +147,7 @@ func TestMsgDeposit_FullFlow(t *testing.T) {
 	fmt.Println("\n--- STEP 5: Verifying Event Emission (Signal for Backend) ---")
 	sdkCtx := sdk.UnwrapSDKContext(f.ctx)
 	events := sdkCtx.EventManager().Events()
-	
+
 	depositEventFound := false
 	for _, ev := range events {
 		if ev.Type == "ob.zkdex.v1.EventDeposit" {

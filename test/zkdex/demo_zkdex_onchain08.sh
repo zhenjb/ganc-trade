@@ -7,30 +7,91 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-SIGNER="alice"
-CHAIN_ID="ob"
-ASSET_DENOM="USDT"
-DEPOSIT_AMOUNT="100"
-WITHDRAW_AMOUNT="40"
-TX_FEE="0USDT"
+SIGNER="${SIGNER:-alice}"
+CHAIN_ID="${CHAIN_ID:-ob}"
+NODE="${NODE:-tcp://localhost:26657}"
+ASSET_DENOM="${ASSET_DENOM:-USDT}"
+DEPOSIT_AMOUNT="${DEPOSIT_AMOUNT:-100}"
+WITHDRAW_AMOUNT="${WITHDRAW_AMOUNT:-40}"
+TX_FEE="${TX_FEE:-0USDT}"
+BINARY="${BINARY:-obd}"
+
+RUN_ID="$(date +%s)"
+BATCH_ID="batch-onchain08-${RUN_ID}"
+WITHDRAW_ID="wd-onchain08-${RUN_ID}"
+NULLIFIER="0xmocknullifierONCHAIN08${RUN_ID}"
+DESTINATION_HASH="0xmockdestinationhashONCHAIN08${RUN_ID}"
+NEW_STATE_ROOT="0xrootONCHAIN08${RUN_ID}"
+PROOF_BUNDLE_FILE="proof_bundle_onchain08_${RUN_ID}.json"
+
+cleanup() {
+    rm -f "$PROOF_BUNDLE_FILE"
+}
+trap cleanup EXIT
 
 extract_json() {
     sed -n '/^{/,$p'
+}
+
+fail() {
+    echo -e "  ${RED}✗ $1${NC}"
+    exit 1
+}
+
+query_json() {
+    "$BINARY" q zkdex "$@" --node "$NODE" -o json 2>/dev/null \
+        || "$BINARY" q zkdex "$@" -o json 2>/dev/null \
+        || "$BINARY" q zkdex "$@" --node "$NODE" 2>/dev/null \
+        || "$BINARY" q zkdex "$@" 2>/dev/null
+}
+
+require_query_json() {
+    local output
+    if ! output=$(query_json "$@"); then
+        echo -e "  ${RED}✗ Query thất bại:${NC} ${BINARY} q zkdex $*"
+        "$BINARY" q zkdex "$@" --node "$NODE" -o json 2>&1 || true
+        exit 1
+    fi
+    printf '%s' "$output"
+}
+
+extract_state_root() {
+    local payload="$1"
+    local root
+    root=$(printf '%s' "$payload" | jq -r '.state_root // .stateRoot // empty' 2>/dev/null)
+    if [ -n "$root" ] && [ "$root" != "null" ]; then
+        printf '%s' "$root"
+        return 0
+    fi
+
+    printf '%s\n' "$payload" | sed -n 's/^[[:space:]]*state_root:[[:space:]]*//p; s/^[[:space:]]*stateRoot:[[:space:]]*//p' | head -n 1 | tr -d '"'
 }
 
 echo -e "${CYAN}======================================================================${NC}"
 echo -e "${CYAN}    KỊCH BẢN DEMO MVP ZKDEX (PROJECT: GANC-TRADE) - TASK ONCHAIN-08   ${NC}"
 echo -e "${CYAN}======================================================================${NC}"
 
-# Bước 1: Khởi tạo file proof_bundle.json tạm thời để tránh lỗi định dạng CLI
-echo -e "\n${YELLOW}[BƯỚC 1]${NC} Khởi tạo file cấu trúc dữ liệu ${CYAN}proof_bundle.json${NC}..."
+command -v "$BINARY" >/dev/null 2>&1 || fail "Không tìm thấy binary '${BINARY}'. Có thể đặt BINARY=/path/to/obd."
+command -v jq >/dev/null 2>&1 || fail "Script cần jq để kiểm tra JSON."
 
-cat << EOF > proof_bundle.json
+# Bước 1: Đọc currentStateRoot thật và khởi tạo proof bundle khớp publicInputs on-chain.
+echo -e "\n${YELLOW}[BƯỚC 1]${NC} Đọc currentStateRoot và khởi tạo file ${CYAN}${PROOF_BUNDLE_FILE}${NC}..."
+ROOT_JSON=$(require_query_json current-state-root)
+OLD_STATE_ROOT=$(extract_state_root "$ROOT_JSON")
+if [ -z "$OLD_STATE_ROOT" ] || [ "$OLD_STATE_ROOT" = "null" ]; then
+    echo "$ROOT_JSON" | jq 2>/dev/null || echo "$ROOT_JSON"
+    fail "Không đọc được currentStateRoot. Thử chạy thủ công: ${BINARY} q zkdex current-state-root"
+fi
+echo -e "  ${GREEN}✓${NC} oldStateRoot hiện tại: ${GREEN}${OLD_STATE_ROOT}${NC}"
+echo -e "        newStateRoot sẽ submit: ${CYAN}${NEW_STATE_ROOT}${NC}"
+echo -e "        batchId: ${CYAN}${BATCH_ID}${NC}"
+
+cat << EOF > "$PROOF_BUNDLE_FILE"
 {
   "proof": "0xmockproof",
   "publicInputs": [
-    "0xrootA",
-    "0xrootB",
+    "${OLD_STATE_ROOT}",
+    "${NEW_STATE_ROOT}",
     "0xdepositsRoot",
     "0xwithdrawalsRoot",
     "0xnullifiersRoot",
@@ -40,8 +101,8 @@ cat << EOF > proof_bundle.json
 }
 EOF
 
-if [ -f "proof_bundle.json" ]; then
-    echo -e "  ${GREEN}✓${NC} Khởi tạo file proof_bundle.json thành công."
+if [ -f "$PROOF_BUNDLE_FILE" ]; then
+    echo -e "  ${GREEN}✓${NC} Khởi tạo file ${PROOF_BUNDLE_FILE} thành công."
 else
     echo -e "  ${RED}✗${NC} Không thể tạo file cấu trúc dữ liệu tạm!"
     exit 1
@@ -49,19 +110,18 @@ fi
 
 # Bước 2: Tạo deposit record thật trên chain để batch proof tham chiếu đúng depositId
 echo -e "\n${YELLOW}[BƯỚC 2]${NC} Tạo deposit record thật trên chain bằng ${CYAN}obd tx zkdex deposit${NC}..."
-SIGNER_ADDR=$(obd keys show "$SIGNER" -a --keyring-backend test 2>/dev/null)
+SIGNER_ADDR=$("$BINARY" keys show "$SIGNER" -a --keyring-backend test 2>/dev/null)
 if [ -z "$SIGNER_ADDR" ]; then
     echo -e "  ${RED}✗ Không lấy được địa chỉ ví của ${SIGNER}!${NC}"
-    rm -f proof_bundle.json
     exit 1
 fi
 echo -e "        Địa chỉ ${SIGNER}: ${CYAN}${SIGNER_ADDR}${NC}"
 
-DEPOSIT_OUTPUT=$(obd tx zkdex deposit "$ASSET_DENOM" "$DEPOSIT_AMOUNT" \
+DEPOSIT_OUTPUT=$("$BINARY" tx zkdex deposit "$ASSET_DENOM" "$DEPOSIT_AMOUNT" \
   --from "$SIGNER" \
   --chain-id "$CHAIN_ID" \
   --keyring-backend test \
-  --node tcp://localhost:26657 \
+  --node "$NODE" \
   --gas auto \
   --gas-adjustment 1.3 \
   --fees "$TX_FEE" \
@@ -78,7 +138,6 @@ if [ "$DEPOSIT_STATUS" -ne 0 ] || [ -z "$DEPOSIT_TXHASH" ] || [ "$DEPOSIT_CODE" 
     fi
     echo -e "  Chi tiết phản hồi từ hệ thống:"
     echo "$DEPOSIT_OUTPUT"
-    rm -f proof_bundle.json
     exit 1
 fi
 
@@ -89,7 +148,7 @@ for i in {5..1}; do
     sleep 1
 done
 
-DEPOSIT_RESULT=$(obd query tx "$DEPOSIT_TXHASH" -o json 2>/dev/null)
+DEPOSIT_RESULT=$("$BINARY" query tx "$DEPOSIT_TXHASH" --node "$NODE" -o json 2>/dev/null)
 DEPOSIT_ID=$(printf '%s' "$DEPOSIT_RESULT" | jq -r '
   [
     (.events? // [])[]?,
@@ -108,29 +167,28 @@ if [ -z "$DEPOSIT_ID" ]; then
     echo -e "  ${RED}✗ Không đọc được deposit_id từ deposit tx!${NC}"
     echo -e "  Chi tiết tx deposit:"
     echo "$DEPOSIT_RESULT" | jq 2>/dev/null || echo "$DEPOSIT_RESULT"
-    rm -f proof_bundle.json
     exit 1
 fi
 echo -e "  ${GREEN}✓${NC} Deposit record đã tạo: ${GREEN}${DEPOSIT_ID}${NC}"
 
 # Bước 3: Thực thi gửi giao dịch submit batch proof lên chuỗi thông qua CLI obd
 echo -e "\n${YELLOW}[BƯỚC 3]${NC} P4 Relayer thực hiện lệnh ${CYAN}obd tx zkdex submit-batch-proof${NC}..."
-echo -e "        (Đang nạp lô xử lý: 1 Khoản nạp [${DEPOSIT_ID}] và 1 Yêu cầu rút [wd-1] bằng ${CYAN}${ASSET_DENOM}${NC})"
+echo -e "        (Đang nạp lô xử lý: 1 Khoản nạp [${DEPOSIT_ID}] và 1 Yêu cầu rút [${WITHDRAW_ID}] bằng ${CYAN}${ASSET_DENOM}${NC})"
 echo -e "        Người ký giao dịch: ${CYAN}${SIGNER}${NC}; phí giao dịch: ${CYAN}${TX_FEE}${NC}"
 
 # Thực thi lệnh và bắt lấy TxHash từ JSON trả về.
 # Lưu ý: lỗi ante/fee thường đi qua stderr, nên cần gom cả stderr để in chẩn đoán.
-TX_OUTPUT=$(obd tx zkdex submit-batch-proof \
+TX_OUTPUT=$("$BINARY" tx zkdex submit-batch-proof \
   --from "$SIGNER" \
   --chain-id "$CHAIN_ID" \
   --keyring-backend test \
-  --node tcp://localhost:26657 \
+  --node "$NODE" \
   --gas auto \
   --gas-adjustment 1.3 \
   --fees "$TX_FEE" \
-  --settlement-update "{\"batchId\":\"batch-1\",\"oldStateRoot\":\"0xrootA\",\"newStateRoot\":\"0xrootB\",\"deposits\":[{\"depositId\":\"${DEPOSIT_ID}\",\"owner\":\"${SIGNER_ADDR}\",\"denom\":\"${ASSET_DENOM}\",\"amount\":\"${DEPOSIT_AMOUNT}\"}],\"withdrawals\":[{\"withdrawId\":\"wd-1\",\"owner\":\"${SIGNER_ADDR}\",\"denom\":\"${ASSET_DENOM}\",\"amount\":\"${WITHDRAW_AMOUNT}\",\"destination\":\"${SIGNER_ADDR}\",\"destinationHash\":\"0xmockdestinationhash\",\"nullifier\":\"0xmocknullifier\"}]}" \
+  --settlement-update "{\"batchId\":\"${BATCH_ID}\",\"oldStateRoot\":\"${OLD_STATE_ROOT}\",\"newStateRoot\":\"${NEW_STATE_ROOT}\",\"deposits\":[{\"depositId\":\"${DEPOSIT_ID}\",\"owner\":\"${SIGNER_ADDR}\",\"denom\":\"${ASSET_DENOM}\",\"amount\":\"${DEPOSIT_AMOUNT}\"}],\"withdrawals\":[{\"withdrawId\":\"${WITHDRAW_ID}\",\"owner\":\"${SIGNER_ADDR}\",\"denom\":\"${ASSET_DENOM}\",\"amount\":\"${WITHDRAW_AMOUNT}\",\"destination\":\"${SIGNER_ADDR}\",\"destinationHash\":\"${DESTINATION_HASH}\",\"nullifier\":\"${NULLIFIER}\"}]}" \
   --batch-commitments '{"depositsRoot":"0xdepositsRoot","withdrawalsRoot":"0xwithdrawalsRoot","nullifiersRoot":"0xnullifiersRoot","withdrawOutputsRoot":"0xwithdrawOutputsRoot"}' \
-  --proof-bundle ./proof_bundle.json \
+  --proof-bundle "./${PROOF_BUNDLE_FILE}" \
   -y -o json 2>&1)
 TX_STATUS=$?
 TX_JSON=$(printf '%s\n' "$TX_OUTPUT" | extract_json)
@@ -147,7 +205,6 @@ if [ "$TX_STATUS" -ne 0 ] || [ -z "$TXHASH" ] || [ "$TXHASH" == "null" ] || [ "$
     fi
     echo -e "  Chi tiết phản hồi từ hệ thống:"
     echo "$TX_OUTPUT"
-    rm -f proof_bundle.json
     exit 1
 fi
 
@@ -163,7 +220,7 @@ done
 
 # Bước 5: Khảo sát trạng thái on-chain thông qua Tx Hash (Query)
 echo -e "\n${YELLOW}[BƯỚC 5]${NC} P4 Relayer thực hiện truy vấn trạng thái xử lý sau block: ${CYAN}obd query tx $TXHASH${NC}..."
-TX_RESULT=$(obd query tx "$TXHASH" -o json 2>/dev/null)
+TX_RESULT=$("$BINARY" query tx "$TXHASH" --node "$NODE" -o json 2>/dev/null)
 
 CODE=$(echo "$TX_RESULT" | jq -r '.code')
 
@@ -171,10 +228,10 @@ if [ "$CODE" == "0" ] || [ "$CODE" == "null" ] || [ -z "$CODE" ]; then
     echo -e "  ${GREEN}✓ [KẾT QUẢ ON-CHAIN]: CHẤP NHẬN (ACCEPTED)${NC}"
     echo -e "    -> Toàn bộ ZK Proof, Public Inputs và Logic trạng thái cũ/mới hợp lệ 100%!"
     
-    # Bước 6: Mô phỏng đầu ra API (Response Payload) mà P4 sẽ trả về cho Frontend (P5)
-    echo -e "\n${YELLOW}[BƯỚC 6]${NC} Giả lập dữ liệu JSON từ Backend (P4) trả về để Frontend (P5) cập nhật UI:"
+    # Bước 6: Đầu ra API (Response Payload) mà P4 sẽ trả về cho Frontend (P5)
+    echo -e "\n${YELLOW}[BƯỚC 6]${NC} Dữ liệu JSON từ Backend (P4) trả về để Frontend (P5) cập nhật UI:"
     echo -e "${GREEN}----------------------------------------------------------------------${NC}"
-    obd query tx "$TXHASH" -o json | jq
+    "$BINARY" query tx "$TXHASH" --node "$NODE" -o json | jq
 
     echo -e "${GREEN}----------------------------------------------------------------------${NC}"
 else
@@ -185,7 +242,7 @@ else
 fi
 
 # Dọn dẹp tài nguyên tạm
-rm -f proof_bundle.json
+cleanup
 echo -e "\n${CYAN}======================================================================${NC}"
 echo -e "             KẾT THÚC KỊCH BẢN DEMO             "
 echo -e "${CYAN}======================================================================${NC}"

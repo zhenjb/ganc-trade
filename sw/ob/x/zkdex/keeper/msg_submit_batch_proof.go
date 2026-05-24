@@ -6,8 +6,8 @@ import (
 	"reflect"
 
 	errorsmod "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
 	"ob/x/zkdex/types"
 )
 
@@ -83,6 +83,9 @@ func (k msgServer) SubmitBatchProof(ctx context.Context, req *types.MsgSubmitBat
 	if !k.Keeper.VerifyProof(verifierInput, req.ProofBundle) {
 		return nil, errorsmod.Wrap(sdkerrors.ErrUnauthorized, "proof verification failed")
 	}
+	if err := k.applySettlementUpdate(ctx, settlementUpdate); err != nil {
+		return nil, err
+	}
 
 	return &types.MsgSubmitBatchProofResponse{
 		Accepted:     true,
@@ -94,6 +97,13 @@ func (k msgServer) SubmitBatchProof(ctx context.Context, req *types.MsgSubmitBat
 func (k msgServer) validateSettlementUpdate(ctx context.Context, settlementUpdate types.SettlementUpdate, batchCommitments types.BatchCommitments) ([]string, error) {
 	if settlementUpdate.BatchId == "" {
 		return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "batchId cannot be empty")
+	}
+	exists, err := k.Keeper.HasBatchRecord(ctx, settlementUpdate.BatchId)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "failed to read batch record %s", settlementUpdate.BatchId)
+	}
+	if exists {
+		return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "batchId %s already exists", settlementUpdate.BatchId)
 	}
 	if settlementUpdate.OldStateRoot == "" {
 		return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "oldStateRoot cannot be empty")
@@ -157,7 +167,6 @@ func (k msgServer) validateSettlementDeposits(ctx context.Context, deposits []*t
 			return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "deposit %s not found", deposit.DepositId)
 		}
 
-
 		processed, err := k.Keeper.IsDepositProcessed(ctx, deposit.DepositId)
 		if err != nil {
 			return errorsmod.Wrapf(err, "failed to read processed status for deposit %s", deposit.DepositId)
@@ -208,7 +217,68 @@ func (k msgServer) validateSettlementWithdrawals(ctx context.Context, withdrawal
 		if used {
 			return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "nullifier %s already used", withdrawal.Nullifier)
 		}
+		exists, err := k.Keeper.HasWithdrawRecord(ctx, withdrawal.WithdrawId)
+		if err != nil {
+			return errorsmod.Wrapf(err, "failed to read withdraw record %s", withdrawal.WithdrawId)
+		}
+		if exists {
+			return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "withdrawId %s already exists", withdrawal.WithdrawId)
+		}
 	}
+	return nil
+}
+
+func (k msgServer) applySettlementUpdate(ctx context.Context, settlementUpdate types.SettlementUpdate) error {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	depositIds := make([]string, 0, len(settlementUpdate.Deposits))
+	withdrawIds := make([]string, 0, len(settlementUpdate.Withdrawals))
+
+	if err := k.Keeper.SetStateRoot(ctx, settlementUpdate.NewStateRoot); err != nil {
+		return errorsmod.Wrap(err, "failed to set new state root")
+	}
+	for _, deposit := range settlementUpdate.Deposits {
+		if err := k.Keeper.SetDepositProcessed(ctx, deposit.DepositId); err != nil {
+			return errorsmod.Wrapf(err, "failed to mark deposit %s processed", deposit.DepositId)
+		}
+		depositIds = append(depositIds, deposit.DepositId)
+	}
+	for _, withdrawal := range settlementUpdate.Withdrawals {
+		if err := k.Keeper.SetNullifierUsed(ctx, withdrawal.Nullifier); err != nil {
+			return errorsmod.Wrapf(err, "failed to mark nullifier %s used", withdrawal.Nullifier)
+		}
+		record := types.WithdrawRecord{
+			WithdrawId:  withdrawal.WithdrawId,
+			Owner:       withdrawal.Owner,
+			Denom:       withdrawal.Denom,
+			Amount:      withdrawal.Amount,
+			Destination: withdrawal.Destination,
+			Nullifier:   withdrawal.Nullifier,
+			Claimed:     false,
+		}
+		if err := k.Keeper.SetWithdrawRecord(ctx, withdrawal.WithdrawId, record); err != nil {
+			return errorsmod.Wrapf(err, "failed to create withdraw record %s", withdrawal.WithdrawId)
+		}
+		withdrawIds = append(withdrawIds, withdrawal.WithdrawId)
+	}
+
+	batchRecord := types.BatchRecord{
+		BatchId:       settlementUpdate.BatchId,
+		OldStateRoot:  settlementUpdate.OldStateRoot,
+		NewStateRoot:  settlementUpdate.NewStateRoot,
+		DepositIds:    depositIds,
+		WithdrawIds:   withdrawIds,
+		CreatedHeight: sdkCtx.BlockHeight(),
+	}
+	if err := k.Keeper.SetBatchRecord(ctx, settlementUpdate.BatchId, batchRecord); err != nil {
+		return errorsmod.Wrapf(err, "failed to store batch record %s", settlementUpdate.BatchId)
+	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zkdex_batch_settlement_applied",
+		sdk.NewAttribute("batch_id", settlementUpdate.BatchId),
+		sdk.NewAttribute("old_state_root", settlementUpdate.OldStateRoot),
+		sdk.NewAttribute("new_state_root", settlementUpdate.NewStateRoot),
+	))
 	return nil
 }
 

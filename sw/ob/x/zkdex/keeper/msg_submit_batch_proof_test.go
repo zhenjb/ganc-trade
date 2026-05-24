@@ -42,7 +42,42 @@ func TestMsgSubmitBatchProofValidationAccepts(t *testing.T) {
 		"0xwithdrawOutputsRoot",
 	}, resp.PublicInputs)
 	require.Equal(t, proofBundle, gotProofBundle)
+	// kiểm tra xem dữ liệu JSON mà Keeper tự đóng gói để ném vào hàm Verify có chứa đúng mảng publicInputs mong muốn hay không
 	require.Contains(t, string(gotVerifierUpdate), `"publicInputs":["0xrootA","0xrootB","0xdepositsRoot","0xwithdrawalsRoot","0xnullifiersRoot","0xwithdrawOutputsRoot"]`)
+
+	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	require.Equal(t, "0xrootB", stateRoot)
+
+	processed, err := f.keeper.IsDepositProcessed(f.ctx, "dep-1")
+	require.NoError(t, err)
+	require.True(t, processed)
+	depositRecord, err := f.keeper.GetDepositRecord(f.ctx, "dep-1")
+	require.NoError(t, err)
+	require.True(t, depositRecord.Processed)
+
+	nullifierUsed, err := f.keeper.IsNullifierUsed(f.ctx, "0xmocknullifier")
+	require.NoError(t, err)
+	require.True(t, nullifierUsed)
+
+	withdrawRecord, err := f.keeper.GetWithdrawRecord(f.ctx, "wd-1")
+	require.NoError(t, err)
+	require.Equal(t, types.WithdrawRecord{
+		WithdrawId:  "wd-1",
+		Owner:       "cosmos1alice",
+		Denom:       "uusdc",
+		Amount:      "40",
+		Destination: "cosmos1alice",
+		Nullifier:   "0xmocknullifier",
+		Claimed:     false,
+	}, withdrawRecord)
+
+	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, "batch-1")
+	require.NoError(t, err)
+	require.Equal(t, "0xrootA", batchRecord.OldStateRoot)
+	require.Equal(t, "0xrootB", batchRecord.NewStateRoot)
+	require.Equal(t, []string{"dep-1"}, batchRecord.DepositIds)
+	require.Equal(t, []string{"wd-1"}, batchRecord.WithdrawIds)
 }
 
 func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
@@ -72,6 +107,27 @@ func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
 				require.NoError(t, f.keeper.SetNullifierUsed(f.ctx, "0xmocknullifier"))
 			},
 			errText: "already used",
+		},
+		{
+			name: "existing withdraw record",
+			mutate: func(t *testing.T, f *fixture, settlementUpdate *types.SettlementUpdate, batchCommitments *types.BatchCommitments, proofBundle *[]byte) {
+				require.NoError(t, f.keeper.SetWithdrawRecord(f.ctx, "wd-1", types.WithdrawRecord{
+					WithdrawId: "wd-1",
+					Owner:      "cosmos1alice",
+					Denom:      "uusdc",
+					Amount:     "40",
+				}))
+			},
+			errText: "already exists",
+		},
+		{
+			name: "existing batch record",
+			mutate: func(t *testing.T, f *fixture, settlementUpdate *types.SettlementUpdate, batchCommitments *types.BatchCommitments, proofBundle *[]byte) {
+				require.NoError(t, f.keeper.SetBatchRecord(f.ctx, "batch-1", types.BatchRecord{
+					BatchId: "batch-1",
+				}))
+			},
+			errText: "already exists",
 		},
 		{
 			name: "proof public inputs mismatch",

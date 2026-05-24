@@ -39,6 +39,24 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					Short:          "Shows whether a zkdex deposit has been processed",
 					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "deposit_id"}},
 				},
+				{
+					RpcMethod:      "WithdrawRecord",
+					Use:            "withdraw-record [withdraw-id]",
+					Short:          "Shows a zkdex withdraw record",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "withdraw_id"}},
+				},
+				{
+					RpcMethod:      "NullifierUsed",
+					Use:            "nullifier-used [nullifier]",
+					Short:          "Shows whether a zkdex nullifier has been used",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "nullifier"}},
+				},
+				{
+					RpcMethod:      "BatchRecord",
+					Use:            "batch-record [batch-id]",
+					Short:          "Shows a zkdex batch record",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "batch_id"}},
+				},
 				// this line is used by ignite scaffolding # autocli/query
 			},
 		},

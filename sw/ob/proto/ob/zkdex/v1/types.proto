@@ -30,7 +30,10 @@ message WithdrawRecord {
   string amount = 4;
   string destination = 5;
   string nullifier = 6;
-  bool claimed = 7;
+  bool claimed = 7 [
+    (gogoproto.jsontag) = "claimed",
+    (amino.dont_omitempty) = true
+  ];
 }
 
 // BatchRecord represents a batch of settlements (optional)
