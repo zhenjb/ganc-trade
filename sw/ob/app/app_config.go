@@ -7,6 +7,8 @@ import (
 	dexmoduletypes "ob/x/dex/types"
 	_ "ob/x/ob/module"
 	obmoduletypes "ob/x/ob/types"
+	_ "ob/x/zkdex/module"
+	zkdexmoduletypes "ob/x/zkdex/types"
 	_ "ob/x/zproofs/module"
 	zproofsmoduletypes "ob/x/zproofs/types"
 	"time"
@@ -89,7 +91,11 @@ var (
 		{Account: nft.ModuleName},
 		{Account: ibctransfertypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner}},
 		{Account: icatypes.ModuleName},
-		{Account: dexmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}}, {Account: zproofsmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}}, {Account: backendmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}}}
+		{Account: dexmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}},
+		{Account: zproofsmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}},
+		{Account: backendmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}},
+		{Account: zkdexmoduletypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner, authtypes.Staking}},
+	}
 
 	// blocked account addresses
 	blockAccAddrs = []string{
@@ -135,6 +141,7 @@ var (
 						dexmoduletypes.ModuleName,
 						zproofsmoduletypes.ModuleName,
 						backendmoduletypes.ModuleName,
+						zkdexmoduletypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/beginBlockers
 					},
 					EndBlockers: []string{
@@ -147,6 +154,7 @@ var (
 						dexmoduletypes.ModuleName,
 						zproofsmoduletypes.ModuleName,
 						backendmoduletypes.ModuleName,
+						zkdexmoduletypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/endBlockers
 					},
 					// The following is mostly only needed when ModuleName != StoreKey name.
@@ -187,6 +195,7 @@ var (
 						dexmoduletypes.ModuleName,
 						zproofsmoduletypes.ModuleName,
 						backendmoduletypes.ModuleName,
+						zkdexmoduletypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/initGenesis
 					},
 				}),
@@ -298,6 +307,10 @@ var (
 			{
 				Name:   backendmoduletypes.ModuleName,
 				Config: appconfig.WrapAny(&backendmoduletypes.Module{}),
+			},
+			{
+				Name:   zkdexmoduletypes.ModuleName,
+				Config: appconfig.WrapAny(&zkdexmoduletypes.Module{}),
 			},
 			// this line is used by starport scaffolding # stargate/app/moduleConfig
 		},

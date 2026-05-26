@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"ob/x/backend/types"
+
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"ob/x/backend/types"
 )
 
 func (k msgServer) Deposit(goCtx context.Context, msg *types.MsgDeposit) (*types.MsgDepositResponse, error) {

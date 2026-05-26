@@ -1,0 +1,44 @@
+{
+  "settlementUpdate": {
+    "batchId": "batch-1",
+    "oldStateRoot": "0xrootA",
+    "newStateRoot": "0xrootB",
+    "deposits": [
+      {
+        "depositId": "dep-1",
+        "owner": "cosmos1alice",
+        "denom": "uusdc",
+        "amount": "100"
+      }
+    ],
+    "withdrawals": [
+      {
+        "withdrawId": "wd-1",
+        "owner": "cosmos1alice",
+        "denom": "uusdc",
+        "amount": "40",
+        "destination": "cosmos1alice",
+        "destinationHash": "0xmockdestinationhash",
+        "nullifier": "0xmocknullifier"
+      }
+    ]
+  },
+  "batchCommitments": {
+    "depositsRoot": "0xdepositsRoot",
+    "withdrawalsRoot": "0xwithdrawalsRoot",
+    "nullifiersRoot": "0xnullifiersRoot",
+    "withdrawOutputsRoot": "0xwithdrawOutputsRoot"
+  },
+  "proofBundle": {
+    "proof": "0xmockproof",
+    "publicInputs": [
+      "0xrootA",
+      "0xrootB",
+      "0xdepositsRoot",
+      "0xwithdrawalsRoot",
+      "0xnullifiersRoot",
+      "0xwithdrawOutputsRoot"
+    ],
+    "verificationKeyId": "v1"
+  }
+}

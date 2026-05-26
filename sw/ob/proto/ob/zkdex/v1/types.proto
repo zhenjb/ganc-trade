@@ -1,0 +1,60 @@
+syntax = "proto3";
+package ob.zkdex.v1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "ob/x/zkdex/types";
+
+// DepositRecord represents a deposit transaction
+message DepositRecord {
+  option (amino.name) = "ob/x/zkdex/DepositRecord";
+  option (gogoproto.equal) = true;
+
+  string deposit_id = 1;
+  string owner = 2;
+  string denom = 3;
+  string amount = 4;
+  bool processed = 5;
+  int64 created_height = 6;
+}
+
+// WithdrawRecord represents a withdraw transaction
+message WithdrawRecord {
+  option (amino.name) = "ob/x/zkdex/WithdrawRecord";
+  option (gogoproto.equal) = true;
+
+  string withdraw_id = 1;
+  string owner = 2;
+  string denom = 3;
+  string amount = 4;
+  string destination = 5;
+  string nullifier = 6;
+  bool claimed = 7 [
+    (gogoproto.jsontag) = "claimed",
+    (amino.dont_omitempty) = true
+  ];
+}
+
+// BatchRecord represents a batch of settlements (optional)
+message BatchRecord {
+  option (amino.name) = "ob/x/zkdex/BatchRecord";
+  option (gogoproto.equal) = true;
+
+  string batch_id = 1;
+  string old_state_root = 2;
+  string new_state_root = 3;
+  repeated string deposit_ids = 4;
+  repeated string withdraw_ids = 5;
+  int64 created_height = 6;
+}
+
+// EventDeposit is emitted when a deposit is created
+message EventDeposit {
+  option (amino.name) = "ob/x/zkdex/EventDeposit";
+
+  string deposit_id = 1;
+  string creator = 2;
+  string denom = 3;
+  string amount = 4;
+}

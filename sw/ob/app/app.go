@@ -49,6 +49,7 @@ import (
 	backendmodulekeeper "ob/x/backend/keeper"
 	dexmodulekeeper "ob/x/dex/keeper"
 	obmodulekeeper "ob/x/ob/keeper"
+	zkdexmodulekeeper "ob/x/zkdex/keeper"
 	zproofsmodulekeeper "ob/x/zproofs/keeper"
 )
 
@@ -107,6 +108,7 @@ type App struct {
 	DexKeeper     dexmodulekeeper.Keeper
 	ZproofsKeeper zproofsmodulekeeper.Keeper
 	BackendKeeper backendmodulekeeper.Keeper
+	ZkdexKeeper   zkdexmodulekeeper.Keeper
 }
 
 func init() {
@@ -190,6 +192,7 @@ func New(
 		&app.DexKeeper,
 		&app.ZproofsKeeper,
 		&app.BackendKeeper,
+		&app.ZkdexKeeper,
 	); err != nil {
 		panic(err)
 	}
