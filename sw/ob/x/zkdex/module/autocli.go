@@ -74,6 +74,12 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					Short:          "Send a zkdex deposit tx",
 					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "denom"}, {ProtoField: "amount"}},
 				},
+				{
+					RpcMethod:      "ClaimWithdraw",
+					Use:            "claim-withdraw [withdraw-id]",
+					Short:          "Claim a settled zkdex withdrawal",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "withdraw_id"}},
+				},
 				// this line is used by ignite scaffolding # autocli/tx
 			},
 		},

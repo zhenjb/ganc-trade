@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>P5 MsgDeposit Wallet Task</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 820px; margin: 32px auto; padding: 0 20px; line-height: 1.5; color: #111827; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    h2 { font-size: 18px; margin-top: 28px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+    code, pre { background: #f3f4f6; border-radius: 6px; }
+    code { padding: 2px 5px; }
+    pre { padding: 12px; overflow-x: auto; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 8px 0; }
+    .box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; margin: 16px 0; }
+  </style>
+</head>
+<body>
+  <h1>P5 Task — Wallet-Signed MsgDeposit</h1>
+  <p>Implement real deposit from the Next.js frontend. Backend does not sign deposit transactions.</p>
+
+  <h2>Goal</h2>
+  <pre>Frontend wallet → sign MsgDeposit → broadcast to chain → refresh backend state</pre>
+
+  <h2>Use this message</h2>
+  <pre>typeUrl: /ob.zkdex.v1.MsgDeposit
+
+value: {
+  creator: connectedWalletAddress,
+  denom: "uusdc",
+  amount: "100"
+}</pre>
+
+  <h2>Required setup</h2>
+  <ul>
+    <li>Connect Keplr/Leap wallet.</li>
+    <li>Add/suggest local chain if needed.</li>
+    <li>Use chain config from P1: <code>chainId</code>, <code>rpc</code>, <code>rest</code>, <code>bech32Prefix</code>, <code>feeDenom</code>, gas/fee.</li>
+    <li>Register/use custom proto message <code>/ob.zkdex.v1.MsgDeposit</code>.</li>
+  </ul>
+
+  <h2>Implementation flow</h2>
+  <ol>
+    <li>User connects wallet.</li>
+    <li>FE gets wallet address.</li>
+    <li>User inputs <code>denom</code> and <code>amount</code>.</li>
+    <li>FE builds <code>MsgDeposit</code>.</li>
+    <li>Wallet signs and broadcasts tx.</li>
+    <li>FE receives <code>txHash</code>.</li>
+    <li>FE parses <code>deposit_id</code> from <code>EventDeposit</code> if available.</li>
+    <li>FE refreshes backend state.</li>
+  </ol>
+
+  <h2>After broadcast</h2>
+  <div class="box">
+    <p>If <code>deposit_id</code> is available:</p>
+    <pre>GET /api/deposits/{depositId}
+GET /api/state</pre>
+    <p>If not available yet, show <code>txHash</code> and refresh:</p>
+    <pre>GET /api/state</pre>
+  </div>
+
+  <h2>Important notes</h2>
+  <ul>
+    <li>Do not call <code>POST /api/deposit</code> in real wallet mode. It is local/dev-only.</li>
+    <li>Use <code>/ob.zkdex.v1.MsgDeposit</code>, not <code>ob.backend</code> MsgDeposit.</li>
+    <li>EventDeposit fields to parse: <code>deposit_id</code>, <code>creator</code>, <code>denom</code>, <code>amount</code>.</li>
+  </ul>
+
+  <h2>Done when</h2>
+  <ul>
+    <li>User can sign and broadcast a real <code>MsgDeposit</code>.</li>
+    <li>Chain creates a deposit record.</li>
+    <li>FE can refresh <code>GET /api/state</code>.</li>
+    <li>If <code>deposit_id</code> is parsed, FE can call <code>GET /api/deposits/{depositId}</code>.</li>
+  </ul>
+</body>
+</html>
