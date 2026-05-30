@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>P1 MsgDeposit Checklist</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 820px; margin: 32px auto; padding: 0 20px; line-height: 1.5; color: #111827; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    h2 { font-size: 18px; margin-top: 28px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+    code, pre { background: #f3f4f6; border-radius: 6px; }
+    code { padding: 2px 5px; }
+    pre { padding: 12px; overflow-x: auto; }
+    ul { padding-left: 22px; }
+    li { margin: 8px 0; }
+    .box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; margin: 16px 0; }
+    .ok { color: #047857; font-weight: 600; }
+    .warn { color: #b45309; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>P1 Checklist — MsgDeposit for Wallet Flow</h1>
+  <p>This is only the checklist P1 needs to confirm before P5 implements wallet-signed deposit.</p>
+
+  <h2>1. Confirm correct message</h2>
+  <ul>
+    <li><span class="ok">Use:</span> <code>proto/ob/zkdex/v1/tx.proto</code></li>
+    <li><span class="warn">Do not use:</span> <code>proto/ob/backend/v1/tx.proto</code></li>
+    <li>Package: <code>ob.zkdex.v1</code></li>
+    <li>Type URL: <code>/ob.zkdex.v1.MsgDeposit</code></li>
+    <li>Signer field: <code>creator</code></li>
+  </ul>
+
+  <h2>2. Confirm MsgDeposit fields</h2>
+  <pre>{
+  "creator": "&lt;wallet address&gt;",
+  "denom": "uusdc",
+  "amount": "100"
+}</pre>
+
+  <h2>3. Confirm EventDeposit fields</h2>
+  <ul>
+    <li>Event type: <code>ob.zkdex.v1.EventDeposit</code></li>
+    <li><code>deposit_id</code></li>
+    <li><code>creator</code></li>
+    <li><code>denom</code></li>
+    <li><code>amount</code></li>
+  </ul>
+
+  <h2>4. Provide chain config to P5</h2>
+  <ul>
+    <li><code>chainId</code></li>
+    <li><code>rpc</code>, for example <code>http://localhost:26657</code></li>
+    <li><code>rest</code>, for example <code>http://localhost:1317</code></li>
+    <li><code>bech32Prefix</code></li>
+    <li><code>feeDenom</code></li>
+    <li><code>defaultGas</code> and <code>defaultFee</code></li>
+    <li>Supported denoms: <code>uatom</code>, <code>uusdc</code></li>
+  </ul>
+
+  <h2>5. Provide one real deposit sample</h2>
+  <div class="box">
+    <ul>
+      <li>txHash</li>
+      <li>deposit_id from EventDeposit</li>
+      <li>creator</li>
+      <li>denom</li>
+      <li>amount</li>
+      <li>Result of: <code>GET /ob/zkdex/v1/deposit_record/{deposit_id}</code></li>
+    </ul>
+  </div>
+
+  <h2>6. Ensure demo account is funded</h2>
+  <ul>
+    <li>Has fee denom, for example <code>uatom</code></li>
+    <li>Has deposit denom, for example <code>uusdc</code></li>
+  </ul>
+</body>
+</html>

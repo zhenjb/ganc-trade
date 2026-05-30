@@ -24,10 +24,14 @@ import (
 // --- MOCK BANK KEEPER ---
 type MockBankKeeper struct {
 	escrowedCoins map[string]sdk.Coins
+	releasedCoins map[string]sdk.Coins
 }
 
 func NewMockBankKeeper() *MockBankKeeper {
-	return &MockBankKeeper{escrowedCoins: make(map[string]sdk.Coins)}
+	return &MockBankKeeper{
+		escrowedCoins: make(map[string]sdk.Coins),
+		releasedCoins: make(map[string]sdk.Coins),
+	}
 }
 
 func (m *MockBankKeeper) SendCoinsFromAccountToModule(ctx context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error {
@@ -36,8 +40,7 @@ func (m *MockBankKeeper) SendCoinsFromAccountToModule(ctx context.Context, sende
 }
 
 func (m *MockBankKeeper) SendCoinsFromModuleToAccount(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error {
-	// Basic mock logic: subtract coins from the tracked balance
-	m.escrowedCoins[recipientAddr.String()] = m.escrowedCoins[recipientAddr.String()].Sub(amt...)
+	m.releasedCoins[recipientAddr.String()] = m.releasedCoins[recipientAddr.String()].Add(amt...)
 	return nil
 }
 

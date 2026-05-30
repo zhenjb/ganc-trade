@@ -68,7 +68,10 @@ message QueryModuleAccountAddressResponse {
   string address = 1;
 }
 
-message QueryModuleAccountBalanceRequest {}
+message QueryModuleAccountBalanceRequest {
+  // denom optionally filters the module account balance to one denomination.
+  string denom = 1;
+}
 
 message QueryModuleAccountBalanceResponse {
   string balance = 1;
