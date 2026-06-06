@@ -1,0 +1,142 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{padding:18px;font-family:Inter,Arial,sans-serif;color:#24292f;background:#fff}
+.w{max-width:980px}
+.tnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.tb{padding:5px 13px;border-radius:16px;border:1px solid #d0d7de;background:#f6f8fa;color:#57606a;font-size:12px;cursor:pointer;white-space:nowrap}
+.tb.on{background:#ddf4ff;border-color:#54aeef;color:#0969da;font-weight:600}
+.pn{display:none}.pn.on{display:block}
+.ptitle{font-size:14px;font-weight:700;margin-bottom:5px}
+.psub{font-size:12px;color:#57606a;margin-bottom:14px;line-height:1.65}
+.ss{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:8px;border:1px solid #d8dee4;background:#f6f8fa;margin-bottom:4px}
+.ss.self{border-style:dashed;background:#f0f3f6}
+.sn{min-width:20px;height:20px;border-radius:50%;background:#f0f3f6;border:1px solid #d0d7de;font-size:10px;font-weight:700;color:#57606a;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sm{font-size:12px;flex:1;line-height:1.55}
+.sm code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;background:#f0f3f6;padding:1px 5px;border-radius:3px}
+.snote{font-size:11px;color:#6e7781;margin-top:3px;font-style:italic}
+.a{display:inline-block;padding:1px 7px;border-radius:6px;font-size:11px;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.au{background:#E1F5EE;color:#085041}.ab{background:#EEEDFE;color:#26215C}.az{background:#E6F1FB;color:#042C53}.ao{background:#FAEEDA;color:#412402}.ac{background:#E7F0FF;color:#0B3A75}
+.div{height:1px;background:#d8dee4;margin:10px 0;opacity:.6}.div-label{text-align:center;font-size:11px;color:#6e7781;margin:6px 0 10px}
+.phase{margin-bottom:18px}.phase-label{font-size:11px;font-weight:700;color:#6e7781;letter-spacing:.4px;margin-bottom:8px;display:flex;align-items:center;gap:8px}.phase-label::after{content:'';flex:1;height:1px;background:#d8dee4}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+.sc{border-radius:10px;border:1px solid #d8dee4;padding:12px;background:#f6f8fa}.sc.on{border-left:3px solid #2F74C0}.sc.off{border-left:3px solid #5DCAA5}.sc.zk{border-left:3px solid #8B5CF6}
+.sct{font-size:11px;font-weight:700;margin-bottom:8px;color:#57606a}
+.f{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #d8dee4;font-size:11px;gap:6px}.f:last-child{border-bottom:none}
+.fk{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#57606a;flex-shrink:0}.fv{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right;line-height:1.4}
+.fn{color:#27500A;font-weight:700}.fd{color:#791F1F}.fc{color:#185FA5;font-weight:700}.fu{color:#6e7781}
+.ec{border-radius:10px;border:1px solid #d0d7de;padding:13px;margin-bottom:9px;background:#f6f8fa}.ec.g{border-color:#3B6D11;background:#EAF3DE}.ec.w{border-color:#BA7517;background:#FAEEDA}.ec.i{border-color:#185FA5;background:#E6F1FB}.ec.r{border-color:#A32D2D;background:#FCEBEB}
+.et{font-size:13px;font-weight:700;margin-bottom:5px}.ec.g .et{color:#27500A}.ec.w .et{color:#633806}.ec.i .et{color:#0C447C}.ec.r .et{color:#791F1F}.eb{font-size:12px;color:#57606a;line-height:1.65}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:#57606a;margin-bottom:12px;padding:8px 10px;background:#f0f3f6;border-radius:8px}.ld{display:flex;align-items:center;gap:4px}
+@media(max-width:720px){.g2{grid-template-columns:1fr}}
+</style>
+
+<div class="w">
+<div class="tnav">
+  <button class="tb on" onclick="go(0)">Deposit flow</button>
+  <button class="tb" onclick="go(1)">Deposit structures</button>
+  <button class="tb" onclick="go(2)">Withdrawal flow</button>
+  <button class="tb" onclick="go(3)">Withdrawal structures</button>
+  <button class="tb" onclick="go(4)">ZK settlement batch</button>
+  <button class="tb" onclick="go(5)">Invariants</button>
+</div>
+
+<div class="pn on" id="p0">
+<div class="ptitle">Deposit flow — Cosmos SDK version</div>
+<div class="psub">User moves Cosmos coins into <code>x/zkdex</code> custody. The deposit is anchored on-chain immediately, but the off-chain balance/root only becomes settled after the relayer submits a valid ZK proof batch.</div>
+<div class="legend"><div class="ld"><span class="a au">User</span> depositor</div><div class="ld"><span class="a ac">x/bank</span> Cosmos bank module</div><div class="ld"><span class="a ab">x/zkdex</span> settlement module</div><div class="ld"><span class="a ao">Offchain</span> indexer/batcher</div><div class="ld"><span class="a az">Prover</span> ZK prover</div></div>
+<div class="ss"><div class="sn">1</div><div class="sm"><span class="a au">User</span> → <span class="a ab">x/zkdex</span>: <code>MsgDeposit(denom, amount)</code><div class="snote">No ERC20 approve step. The Cosmos transaction itself authorizes the module to move coins from the signer.</div></div></div>
+<div class="ss"><div class="sn">2</div><div class="sm"><span class="a ab">x/zkdex</span> → <span class="a ac">x/bank</span>: <code>SendCoinsFromAccountToModule(user, ModuleName, coins)</code><div class="snote">Coins are locked in the <code>zkdex</code> module account / escrow.</div></div></div>
+<div class="ss self"><div class="sn">3</div><div class="sm"><span class="a ab">x/zkdex</span> self: write <code>DepositRecord{deposit_id, owner, denom, amount, height, processed:false}</code><div class="snote"><code>currentStateRoot</code> is NOT changed yet. Deposit is on-chain, but not settled into the ZK state root.</div></div></div>
+<div class="ss self"><div class="sn">4</div><div class="sm"><span class="a ab">x/zkdex</span> self: emit <code>DepositQueued(deposit_id, owner, denom, amount)</code></div></div>
+<div class="div"></div><div class="div-label">— async boundary — off-chain indexer picks up the deposit —</div>
+<div class="ss"><div class="sn">5</div><div class="sm"><span class="a ab">x/zkdex</span> → <span class="a ao">Offchain</span>: indexer reads <code>DepositQueued</code> event or queries <code>DepositRecord</code></div></div>
+<div class="ss self"><div class="sn">6</div><div class="sm"><span class="a ao">Offchain</span> self: credit pending off-chain balance <code>Balance[user][denom] += amount</code>, recompute local state root<div class="snote">This is pending off-chain state. On-chain root has not accepted it yet.</div></div></div>
+<div class="ss self"><div class="sn">7</div><div class="sm"><span class="a ao">Offchain</span> self: add <code>deposit_id</code> to <code>SettlementBatch.deposits[]</code></div></div>
+<div class="ss"><div class="sn">8</div><div class="sm"><span class="a ao">Offchain</span> → <span class="a az">Prover</span>: send <code>batch + witness</code></div></div>
+<div class="ss"><div class="sn">9</div><div class="sm"><span class="a az">Prover</span> → <span class="a ao">Offchain</span>: return proof <code>π</code></div></div>
+<div class="ss"><div class="sn">10</div><div class="sm"><span class="a ao">Relayer</span> → <span class="a ab">x/zkdex</span>: <code>MsgSubmitBatchProof(settlementUpdate, proofBundle)</code><div class="snote">Settlement update and proof are submitted together in one Cosmos tx.</div></div></div>
+<div class="ss self"><div class="sn">11</div><div class="sm"><span class="a ab">x/zkdex</span> self: check <code>oldStateRoot == currentStateRoot</code>, <code>!depositProcessed[id]</code>, then verify proof</div></div>
+<div class="ss self"><div class="sn">12</div><div class="sm"><span class="a ab">x/zkdex</span> self: if valid, set <code>currentStateRoot = newStateRoot</code> and <code>depositProcessed[id] = true</code></div></div>
+</div>
+
+<div class="pn" id="p1">
+<div class="ptitle">Deposit — structure changes per phase</div>
+<div class="psub">Deposit has two different moments: first, coins are locked on-chain; later, a ZK batch settles the deposit into the off-chain state root.</div>
+<div class="phase"><div class="phase-label">PHASE 1 — user calls MsgDeposit on-chain</div>
+<div class="g2"><div class="sc on"><div class="sct">ON-CHAIN — DepositRecord</div><div class="f"><span class="fk">deposit_id</span><span class="fv fc">dep-1 ← created</span></div><div class="f"><span class="fk">owner</span><span class="fv fc">cosmos1alice…</span></div><div class="f"><span class="fk">denom</span><span class="fv fc">uusdc</span></div><div class="f"><span class="fk">amount</span><span class="fv fc">100</span></div><div class="f"><span class="fk">processed</span><span class="fv fc">false ← created</span></div></div>
+<div class="sc on"><div class="sct">ON-CHAIN — x/bank balances</div><div class="f"><span class="fk">Alice</span><span class="fv"><span class="fd">1000</span> → <span class="fn">900</span></span></div><div class="f"><span class="fk">zkdex module account</span><span class="fv"><span class="fd">0</span> → <span class="fn">100</span></span></div><div class="f"><span class="fk">currentStateRoot</span><span class="fv fu">unchanged</span></div></div></div>
+<div class="g2"><div class="sc off"><div class="sct">OFF-CHAIN — Deposit Queue</div><div class="f"><span class="fk">dep-1</span><span class="fv fc">Pending ← indexed</span></div><div class="f"><span class="fk">source</span><span class="fv fu">event / query</span></div></div>
+<div class="sc off"><div class="sct">OFF-CHAIN — Pending local state</div><div class="f"><span class="fk">Alice offchain balance</span><span class="fv"><span class="fd">0</span> → <span class="fn">100</span></span></div><div class="f"><span class="fk">local root</span><span class="fv"><span class="fd">rootA</span> → <span class="fn">rootB</span></span></div><div class="f"><span class="fk">settled on-chain?</span><span class="fv fd">no</span></div></div></div></div>
+<div class="phase"><div class="phase-label">PHASE 2 — relayer submits MsgSubmitBatchProof</div>
+<div class="g2"><div class="sc on"><div class="sct">ON-CHAIN — x/zkdex state</div><div class="f"><span class="fk">currentStateRoot</span><span class="fv"><span class="fd">rootA</span> → <span class="fn">rootB</span></span></div><div class="f"><span class="fk">depositProcessed[dep-1]</span><span class="fv"><span class="fd">false</span> → <span class="fn">true</span></span></div><div class="f"><span class="fk">batchId</span><span class="fv"><span class="fd">0</span> → <span class="fn">1</span></span></div></div>
+<div class="sc zk"><div class="sct">ZK — accepted proof</div><div class="f"><span class="fk">proof</span><span class="fv fn">valid</span></div><div class="f"><span class="fk">public old root</span><span class="fv fc">rootA</span></div><div class="f"><span class="fk">public new root</span><span class="fv fc">rootB</span></div></div></div></div>
+</div>
+
+<div class="pn" id="p2">
+<div class="ptitle">Withdrawal flow — Cosmos SDK version</div>
+<div class="psub">Withdrawal is a two-step process. Step A: a ZK batch settles the off-chain balance reduction and creates a claimable <code>WithdrawRecord</code>. Step B: the user calls <code>MsgClaimWithdraw</code>.</div>
+<div class="ss"><div class="sn">1</div><div class="sm"><span class="a au">User</span> → <span class="a ao">Offchain</span>: create <code>WithdrawRequest{denom, amount, destination, nonce}</code></div></div>
+<div class="ss self"><div class="sn">2</div><div class="sm"><span class="a ao">Offchain</span> self: check pending off-chain balance <code>balance ≥ amount</code></div></div>
+<div class="ss self"><div class="sn">3</div><div class="sm"><span class="a ao">Offchain</span> self: debit off-chain balance, increment nonce, compute <code>newStateRoot</code></div></div>
+<div class="ss self"><div class="sn">4</div><div class="sm"><span class="a ao">Offchain</span> self: compute <code>nullifier = Hash(userSecret, nonce)</code>, create <code>withdrawOutput</code></div></div>
+<div class="ss"><div class="sn">5</div><div class="sm"><span class="a ao">Offchain</span> → <span class="a az">Prover</span>: send <code>batch + witness</code></div></div>
+<div class="ss"><div class="sn">6</div><div class="sm"><span class="a az">Prover</span> → <span class="a ao">Relayer</span>: return proof <code>π</code> + public inputs</div></div>
+<div class="ss"><div class="sn">7</div><div class="sm"><span class="a ao">Relayer</span> → <span class="a ab">x/zkdex</span>: <code>MsgSubmitBatchProof(settlementUpdate, proofBundle)</code></div></div>
+<div class="ss self"><div class="sn">8</div><div class="sm"><span class="a ab">x/zkdex</span> self: check <code>oldStateRoot</code>, <code>depositProcessed</code>, and <code>!nullifierUsed[nullifier]</code></div></div>
+<div class="ss self"><div class="sn">9</div><div class="sm"><span class="a ab">x/zkdex</span> self: verify ZK proof using public inputs</div></div>
+<div class="ss self"><div class="sn">10</div><div class="sm"><span class="a ab">x/zkdex</span> self: if valid, update root, mark <code>nullifierUsed = true</code>, create <code>WithdrawRecord{claimed:false}</code></div></div>
+<div class="div"></div><div class="div-label">— user can now claim after proof batch is accepted —</div>
+<div class="ss"><div class="sn">11</div><div class="sm"><span class="a au">User</span> → <span class="a ab">x/zkdex</span>: <code>MsgClaimWithdraw(withdraw_id)</code></div></div>
+<div class="ss self"><div class="sn">12</div><div class="sm"><span class="a ab">x/zkdex</span> self: check <code>WithdrawRecord exists</code> and <code>claimed == false</code></div></div>
+<div class="ss"><div class="sn">13</div><div class="sm"><span class="a ab">x/zkdex</span> → <span class="a ac">x/bank</span>: <code>SendCoinsFromModuleToAccount(ModuleName, destination, coins)</code></div></div>
+<div class="ss self"><div class="sn">14</div><div class="sm"><span class="a ab">x/zkdex</span> self: set <code>WithdrawRecord.claimed = true</code></div></div>
+</div>
+
+<div class="pn" id="p3">
+<div class="ptitle">Withdrawal — structure changes per phase</div>
+<div class="psub">Withdrawal writes to different structures at different times: pending off-chain state, on-chain settlement state, then x/bank balance transfer.</div>
+<div class="phase"><div class="phase-label">PHASE 1 — off-chain service processes withdraw request</div>
+<div class="g2"><div class="sc off"><div class="sct">OFF-CHAIN — Account State</div><div class="f"><span class="fk">balance[uusdc]</span><span class="fv"><span class="fd">100</span> → <span class="fn">60</span></span></div><div class="f"><span class="fk">nonce</span><span class="fv"><span class="fd">0</span> → <span class="fn">1</span></span></div><div class="f"><span class="fk">local root</span><span class="fv"><span class="fd">rootB</span> → <span class="fn">rootC</span></span></div></div>
+<div class="sc off"><div class="sct">OFF-CHAIN — WithdrawRequest</div><div class="f"><span class="fk">withdraw_id</span><span class="fv fc">wd-1 ← created</span></div><div class="f"><span class="fk">amount</span><span class="fv fc">40</span></div><div class="f"><span class="fk">nullifier</span><span class="fv fc">0xNNN… computed</span></div></div></div></div>
+<div class="phase"><div class="phase-label">PHASE 2 — proof batch accepted on-chain</div>
+<div class="g2"><div class="sc on"><div class="sct">ON-CHAIN — x/zkdex state</div><div class="f"><span class="fk">currentStateRoot</span><span class="fv"><span class="fd">rootB</span> → <span class="fn">rootC</span></span></div><div class="f"><span class="fk">nullifierUsed[0xNNN]</span><span class="fv"><span class="fd">false</span> → <span class="fn">true</span></span></div></div>
+<div class="sc on"><div class="sct">ON-CHAIN — WithdrawRecord</div><div class="f"><span class="fk">withdraw_id</span><span class="fv fc">wd-1 ← created</span></div><div class="f"><span class="fk">destination</span><span class="fv fc">cosmos1alice…</span></div><div class="f"><span class="fk">amount</span><span class="fv fc">40 uusdc</span></div><div class="f"><span class="fk">claimed</span><span class="fv fc">false ← created</span></div></div></div></div>
+<div class="phase"><div class="phase-label">PHASE 3 — user claims withdrawal</div>
+<div class="g2"><div class="sc on"><div class="sct">ON-CHAIN — x/bank balances</div><div class="f"><span class="fk">zkdex module account</span><span class="fv"><span class="fd">100</span> → <span class="fn">60</span></span></div><div class="f"><span class="fk">Alice</span><span class="fv"><span class="fd">900</span> → <span class="fn">940</span></span></div><div class="f"><span class="fk">currentStateRoot</span><span class="fv fu">unchanged</span></div></div>
+<div class="sc on"><div class="sct">ON-CHAIN — WithdrawRecord[wd-1]</div><div class="f"><span class="fk">claimed</span><span class="fv"><span class="fd">false</span> → <span class="fn">true</span></span></div><div class="f"><span class="fk">nullifier</span><span class="fv fu">unchanged permanent record</span></div></div></div></div>
+</div>
+
+<div class="pn" id="p4">
+<div class="ptitle">ZK settlement batch — what the proof means</div>
+<div class="psub">The relayer submits one transaction containing both the proposed settlement update and the proof. The on-chain module applies the update only if the proof is valid.</div>
+<div class="ss"><div class="sn">1</div><div class="sm"><span class="a ao">Offchain</span> builds <code>SettlementUpdate</code>: <code>oldStateRoot, newStateRoot, depositId, withdrawId, nullifier, withdraw amount</code></div></div>
+<div class="ss"><div class="sn">2</div><div class="sm"><span class="a az">Prover</span> creates <code>ProofBundle{proof, publicInputs, verificationKeyId}</code></div></div>
+<div class="ss"><div class="sn">3</div><div class="sm"><span class="a ao">Relayer</span> submits <code>MsgSubmitBatchProof(settlementUpdate, proofBundle)</code> to <span class="a ab">x/zkdex</span></div></div>
+<div class="ss self"><div class="sn">4</div><div class="sm"><span class="a ab">x/zkdex</span> verifies that the proof is valid for exactly this settlement update<div class="snote">If someone changes <code>newStateRoot</code>, amount, nullifier, or withdrawal output, proof verification must fail.</div></div></div>
+<div class="ss self"><div class="sn">5</div><div class="sm"><span class="a ab">x/zkdex</span> applies the update atomically only after successful proof verification</div></div>
+<div class="g2" style="margin-top:12px"><div class="sc zk"><div class="sct">PUBLIC INPUTS</div><div class="f"><span class="fk">oldStateRoot</span><span class="fv fc">rootB</span></div><div class="f"><span class="fk">newStateRoot</span><span class="fv fc">rootC</span></div><div class="f"><span class="fk">depositAmount</span><span class="fv fc">100</span></div><div class="f"><span class="fk">withdrawAmount</span><span class="fv fc">40</span></div><div class="f"><span class="fk">nullifier</span><span class="fv fc">0xNNN…</span></div></div>
+<div class="sc zk"><div class="sct">PRIVATE WITNESS</div><div class="f"><span class="fk">userSecret</span><span class="fv fu">hidden</span></div><div class="f"><span class="fk">nonce</span><span class="fv fu">hidden or partially public</span></div><div class="f"><span class="fk">oldBalance</span><span class="fv fu">hidden</span></div><div class="f"><span class="fk">newBalance</span><span class="fv fu">hidden</span></div><div class="f"><span class="fk">state path</span><span class="fv fu">optional MVP simplification</span></div></div></div>
+</div>
+
+<div class="pn" id="p5">
+<div class="ptitle">Invariants and edge cases</div>
+<div class="psub">Properties that must hold in the Cosmos version, and what should happen when things go wrong.</div>
+<div class="ec g"><div class="et">Invariant — module account custody</div><div class="eb">Coins deposited by users must be held by the <code>zkdex</code> module account. Withdrawals can only be paid from that module account through <code>x/bank</code>.</div></div>
+<div class="ec g"><div class="et">Invariant — currentStateRoot advances only after a valid proof</div><div class="eb"><code>currentStateRoot</code> changes only inside <code>MsgSubmitBatchProof</code>, and only after proof verification succeeds. No direct admin/manual update should exist in MVP.</div></div>
+<div class="ec g"><div class="et">Invariant — withdrawal requires a WithdrawRecord</div><div class="eb"><code>MsgClaimWithdraw</code> never creates withdrawal rights by itself. It only pays out a previously created <code>WithdrawRecord</code>.</div></div>
+<div class="ec i"><div class="et">Edge case — off-chain service crashes after deposit</div><div class="eb">Safe. The deposit is already recorded on-chain as <code>processed=false</code>. The indexer can replay events or query pending records and rebuild the deposit queue.</div></div>
+<div class="ec r"><div class="et">Edge case — duplicate nullifier</div><div class="eb">Rejected before or during batch submission. <code>nullifierUsed[nullifier]</code> prevents replaying the same withdraw/state transition.</div></div>
+<div class="ec r"><div class="et">Edge case — invalid proof</div><div class="eb">The whole <code>MsgSubmitBatchProof</code> transaction fails. No root update, no processed deposit, no nullifier write, and no withdraw record creation.</div></div>
+<div class="ec r"><div class="et">Edge case — claim twice</div><div class="eb">Rejected by <code>WithdrawRecord.claimed == true</code>. The module must set claimed immediately after successful <code>x/bank</code> transfer.</div></div>
+<div class="ec w"><div class="et">Limitation — operator/prover availability</div><div class="eb">If the off-chain service refuses to build/prove a withdrawal, MVP may not include a forced-withdraw escape hatch. This should be documented as future work.</div></div>
+</div>
+
+</div>
+<script>
+function go(i){
+  document.querySelectorAll('.pn').forEach((p,j)=>p.classList.toggle('on',j===i));
+  document.querySelectorAll('.tb').forEach((b,j)=>b.classList.toggle('on',j===i));
+}
+</script>

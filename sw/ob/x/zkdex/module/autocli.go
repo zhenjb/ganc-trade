@@ -23,9 +23,15 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					Short:     "Shows the zkdex module account address",
 				},
 				{
-					RpcMethod: "ModuleAccountBalance",
-					Use:       "module-account-balance",
-					Short:     "Shows the zkdex module account spendable balance",
+					RpcMethod:      "ModuleAccountBalance",
+					Use:            "module-account-balance [denom]",
+					Short:          "Shows the zkdex module account spendable balance",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "denom", Optional: true}},
+				},
+				{
+					RpcMethod: "CurrentStateRoot",
+					Use:       "current-state-root",
+					Short:     "Shows the current zkdex state root",
 				},
 				{
 					RpcMethod:      "DepositRecord",
@@ -73,6 +79,12 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					Use:            "deposit [denom] [amount]",
 					Short:          "Send a zkdex deposit tx",
 					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "denom"}, {ProtoField: "amount"}},
+				},
+				{
+					RpcMethod:      "ClaimWithdraw",
+					Use:            "claim-withdraw [withdraw-id]",
+					Short:          "Claim a settled zkdex withdrawal",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "withdraw_id"}},
 				},
 				// this line is used by ignite scaffolding # autocli/tx
 			},

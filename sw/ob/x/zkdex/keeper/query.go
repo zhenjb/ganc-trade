@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -36,6 +37,12 @@ func (q queryServer) ModuleAccountBalance(ctx context.Context, req *types.QueryM
 	}
 
 	coins := q.k.GetModuleAccountBalance(ctx)
+	if req.Denom != "" {
+		if err := sdk.ValidateDenom(req.Denom); err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid denom")
+		}
+		return &types.QueryModuleAccountBalanceResponse{Balance: sdk.NewCoin(req.Denom, coins.AmountOf(req.Denom)).String()}, nil
+	}
 	return &types.QueryModuleAccountBalanceResponse{Balance: coins.String()}, nil
 }
 
@@ -75,6 +82,9 @@ func (q queryServer) WithdrawRecord(ctx context.Context, req *types.QueryWithdra
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
+	if req.WithdrawId == "" {
+		return nil, status.Error(codes.InvalidArgument, "withdraw id cannot be empty")
+	}
 
 	record, err := q.k.GetWithdrawRecord(ctx, req.WithdrawId)
 	if err != nil {
@@ -86,6 +96,9 @@ func (q queryServer) WithdrawRecord(ctx context.Context, req *types.QueryWithdra
 func (q queryServer) NullifierUsed(ctx context.Context, req *types.QueryNullifierUsedRequest) (*types.QueryNullifierUsedResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+	if req.Nullifier == "" {
+		return nil, status.Error(codes.InvalidArgument, "nullifier cannot be empty")
 	}
 
 	used, err := q.k.IsNullifierUsed(ctx, req.Nullifier)
