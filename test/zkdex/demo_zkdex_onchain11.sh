@@ -18,6 +18,8 @@ DEPOSIT_AMOUNT="${DEPOSIT_AMOUNT:-100}"
 WITHDRAW_AMOUNT="${WITHDRAW_AMOUNT:-40}"
 TX_FEE="${TX_FEE:-0USDT}"
 BINARY="${BINARY:-obd}"
+FRONTEND_CLAIM_OUTPUT_FILE="${FRONTEND_CLAIM_OUTPUT_FILE:-}"
+STOP_BEFORE_CLAIM="${STOP_BEFORE_CLAIM:-0}"
 
 RUN_ID="$(date +%s)"
 BATCH_ID="batch-onchain11-${RUN_ID}"
@@ -308,6 +310,121 @@ assert_eq "$MODULE_BALANCE_BEFORE" "$EXPECTED_MODULE_BALANCE_BEFORE" "Query modu
 
 ALICE_BALANCE_BEFORE_CLAIM=$(bank_balance_amount "$SIGNER_ADDR" "$ASSET_DENOM")
 echo -e "  ${GREEN}✓${NC} Bank balance ${SIGNER} trước claim: ${GREEN}${ALICE_BALANCE_BEFORE_CLAIM}${ASSET_DENOM}${NC}"
+
+if [ -n "$FRONTEND_CLAIM_OUTPUT_FILE" ]; then
+    mkdir -p "$(dirname "$FRONTEND_CLAIM_OUTPUT_FILE")"
+    jq -n \
+      --arg generatedAt "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+      --arg chainId "$CHAIN_ID" \
+      --arg node "$NODE" \
+      --arg signer "$SIGNER" \
+      --arg signerAddress "$SIGNER_ADDR" \
+      --arg denom "$ASSET_DENOM" \
+      --arg withdrawId "$WITHDRAW_ID" \
+      --arg withdrawAmount "$WITHDRAW_AMOUNT" \
+      --arg destination "$SIGNER_ADDR" \
+      --arg nullifier "$NULLIFIER" \
+      --arg oldStateRoot "$OLD_STATE_ROOT" \
+      --arg newStateRoot "$NEW_STATE_ROOT" \
+      --arg depositId "$DEPOSIT_ID" \
+      --arg depositAmount "$DEPOSIT_AMOUNT" \
+      --arg batchId "$BATCH_ID" \
+      --arg submitTxHash "$SUBMIT_TXHASH" \
+      --arg moduleBalanceBeforeClaim "$MODULE_BALANCE_BEFORE" \
+      --arg userBalanceBeforeClaim "$ALICE_BALANCE_BEFORE_CLAIM" \
+      --argjson withdrawRecord "$WITHDRAW_JSON" \
+      '{
+        schema: "zkdex.frontend.claim-withdraw.v1",
+        generatedAt: $generatedAt,
+        purpose: "Frontend uses this after withdrawal flow step 7 has accepted MsgSubmitBatchProof and created a claimable WithdrawRecord.",
+        chain: {
+          chainId: $chainId,
+          node: $node,
+          binary: "obd"
+        },
+        signer: {
+          keyName: $signer,
+          address: $signerAddress
+        },
+        claimWithdraw: {
+          withdrawId: $withdrawId,
+          creator: $signerAddress,
+          tx: {
+            typeUrl: "/ob.zkdex.v1.MsgClaimWithdraw",
+            value: {
+              creator: $signerAddress,
+              withdrawId: $withdrawId
+            },
+            cli: ("obd tx zkdex claim-withdraw " + $withdrawId + " --from " + $signer + " --chain-id " + $chainId + " --keyring-backend test --node " + $node + " --gas auto --gas-adjustment 1.3 --fees 0" + $denom + " -y -o json")
+          },
+          preflightQueries: {
+            withdrawRecord: {
+              cli: ("obd q zkdex withdraw-record " + $withdrawId + " --node " + $node + " -o json"),
+              restPath: ("/ob/zkdex/v1/withdraw_record/" + $withdrawId),
+              expected: {
+                record: {
+                  withdraw_id: $withdrawId,
+                  owner: $signerAddress,
+                  denom: $denom,
+                  amount: $withdrawAmount,
+                  destination: $destination,
+                  nullifier: $nullifier,
+                  claimed: false
+                }
+              },
+              actual: $withdrawRecord
+            },
+            moduleAccountBalance: {
+              cli: ("obd q zkdex module-account-balance " + $denom + " --node " + $node + " -o json"),
+              restPath: "/ob/zkdex/v1/module_account_balance",
+              beforeClaim: $moduleBalanceBeforeClaim
+            }
+          },
+          expectedAfterSuccess: {
+            eventType: "zkdex_withdraw_claimed",
+            eventAttributes: {
+              withdraw_id: $withdrawId,
+              creator: $signerAddress,
+              denom: $denom,
+              amount: $withdrawAmount
+            },
+            withdrawRecord: {
+              claimed: true
+            },
+            userBankBalanceDelta: {
+              denom: $denom,
+              amount: $withdrawAmount
+            }
+          }
+        },
+        sourceStep7: {
+          submitBatchProofTxHash: $submitTxHash,
+          settlementSummary: {
+            batchId: $batchId,
+            oldStateRoot: $oldStateRoot,
+            newStateRoot: $newStateRoot,
+            depositId: $depositId,
+            depositAmount: $depositAmount,
+            withdrawId: $withdrawId,
+            withdrawAmount: $withdrawAmount,
+            nullifier: $nullifier
+          }
+        },
+        balancesBeforeClaim: {
+          module: $moduleBalanceBeforeClaim,
+          userAmount: $userBalanceBeforeClaim,
+          denom: $denom
+        }
+      }' > "$FRONTEND_CLAIM_OUTPUT_FILE"
+    echo -e "  ${GREEN}✓${NC} Đã export data cho frontend claim withdraw: ${CYAN}${FRONTEND_CLAIM_OUTPUT_FILE}${NC}"
+fi
+
+if [ "$STOP_BEFORE_CLAIM" = "1" ]; then
+    echo -e "\n${GREEN}======================================================================${NC}"
+    echo -e "${GREEN}  READY: WithdrawRecord đã claimable. Dừng trước bước claim để frontend tự test. ${NC}"
+    echo -e "${GREEN}======================================================================${NC}"
+    exit 0
+fi
 
 echo -e "\n${YELLOW}[BƯỚC 5]${NC} ONCHAIN-10: claim withdraw và xác minh claimed=true..."
 if ! CLAIM_TXHASH=$(submit_tx_json "ClaimWithdraw" \
