@@ -33,4 +33,7 @@ message GenesisState {
 
   // batch_records defines the batch records at genesis
   repeated BatchRecord batch_records = 7;
+
+  // order_nullifier_used defines the used order nullifiers at genesis
+  repeated string order_nullifier_used = 8;
 }

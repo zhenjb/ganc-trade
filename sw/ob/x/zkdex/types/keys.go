@@ -30,6 +30,17 @@ var WithdrawRecordKey = collections.NewPrefix("wr_zkdex")
 // NullifierUsedKey is the prefix to retrieve used nullifiers
 var NullifierUsedKey = collections.NewPrefix("nu_zkdex")
 
+// OrderNullifierUsedKeyPrefix is the raw KV prefix for used order nullifiers.
+const OrderNullifierUsedKeyPrefix = "onu_zkdex"
+
+// OrderNullifierUsedMapKey is the collections prefix for used order nullifiers.
+var OrderNullifierUsedMapKey = collections.NewPrefix("onu_zkdex")
+
+// OrderNullifierUsedKey returns the raw KV key for a normalized order nullifier.
+func OrderNullifierUsedKey(nullifier []byte) []byte {
+	return append(KeyPrefix(OrderNullifierUsedKeyPrefix), nullifier...)
+}
+
 // DepositProcessedKey is the prefix to retrieve processed deposits
 var DepositProcessedKey = collections.NewPrefix("dp_zkdex")
 

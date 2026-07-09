@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -78,6 +79,47 @@ func TestMsgSubmitBatchProofValidationAccepts(t *testing.T) {
 	require.Equal(t, "0xrootB", batchRecord.NewStateRoot)
 	require.Equal(t, []string{"dep-1"}, batchRecord.DepositIds)
 	require.Equal(t, []string{"wd-1"}, batchRecord.WithdrawIds)
+}
+
+func TestMsgSubmitBatchProofAcceptsTradeOnlyBatch(t *testing.T) {
+	f := initFixture(t)
+	creator := sample.AccAddress()
+	settlementUpdate, batchCommitments, proofBundle := validTradeOnlyMsgSubmitBatchProof(t, f)
+
+	var gotVerifierUpdate []byte
+	k := f.keeper.WithProofVerifier(types.ProofVerifierFunc(func(update []byte, proof []byte) bool {
+		gotVerifierUpdate = append([]byte(nil), update...)
+		return true
+	}))
+	msgServer := keeper.NewMsgServerImpl(k)
+
+	resp, err := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          creator,
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      proofBundle,
+	})
+	require.NoError(t, err)
+	require.True(t, resp.Accepted)
+	require.Equal(t, []string{
+		"0xrootC",
+		"0xrootD",
+		"0xemptyDepositsRoot",
+		"0xemptyWithdrawalsRoot",
+		"0xemptyNullifiersRoot",
+		"0xemptyWithdrawOutputsRoot",
+	}, resp.PublicInputs)
+	require.Contains(t, string(gotVerifierUpdate), `"tradeId":"trd-1"`)
+	require.Contains(t, string(gotVerifierUpdate), `"tradeBatchCommitment":"0x5452442d41544f4d2d555344542d62617463682d39"`)
+
+	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	require.Equal(t, "0xrootD", stateRoot)
+
+	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, "batch-9")
+	require.NoError(t, err)
+	require.Empty(t, batchRecord.DepositIds)
+	require.Empty(t, batchRecord.WithdrawIds)
 }
 
 func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
@@ -168,6 +210,36 @@ func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
 	}
 }
 
+func validTradeOnlyMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate, types.BatchCommitments, []byte) {
+	t.Helper()
+
+	require.NoError(t, f.keeper.SetStateRoot(f.ctx, "0xrootC"))
+
+	settlementUpdate := types.SettlementUpdate{
+		BatchId:              "batch-9",
+		OldStateRoot:         "0xrootC",
+		NewStateRoot:         "0xrootD",
+		Trades:               []*types.Trade{agreementTrade()},
+		TradeBatchCommitment: []byte("TRD-ATOM-USDT-batch-9"),
+	}
+	batchCommitments := types.BatchCommitments{
+		DepositsRoot:        "0xemptyDepositsRoot",
+		WithdrawalsRoot:     "0xemptyWithdrawalsRoot",
+		NullifiersRoot:      "0xemptyNullifiersRoot",
+		WithdrawOutputsRoot: "0xemptyWithdrawOutputsRoot",
+	}
+	proofBundle := proofBundleJSON(t, []string{
+		settlementUpdate.OldStateRoot,
+		settlementUpdate.NewStateRoot,
+		batchCommitments.DepositsRoot,
+		batchCommitments.WithdrawalsRoot,
+		batchCommitments.NullifiersRoot,
+		batchCommitments.WithdrawOutputsRoot,
+	})
+
+	return settlementUpdate, batchCommitments, proofBundle
+}
+
 func validMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate, types.BatchCommitments, []byte) {
 	t.Helper()
 
@@ -221,6 +293,26 @@ func validMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate,
 	})
 
 	return settlementUpdate, batchCommitments, proofBundle
+}
+
+func agreementTrade() *types.Trade {
+	return &types.Trade{
+		TradeId:        "trd-1",
+		Market:         "ATOM/USDT",
+		MakerOrderId:   "ord-077",
+		TakerOrderId:   "ord-101",
+		OrderHash:      "0x" + strings.Repeat("a", 64),
+		OrderNullifier: "0x" + strings.Repeat("b", 64),
+		Owner:          "cosmos1alice",
+		Denom:          "uatom",
+		Side:           "buy",
+		Amount:         "3",
+		Price:          "10.20",
+		BaseQty:        "3",
+		QuoteQty:       "30.60",
+		MakerFee:       "0.03",
+		TakerFee:       "0.06",
+	}
 }
 
 func proofBundleJSON(t *testing.T, publicInputs []string) []byte {

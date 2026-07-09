@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"reflect"
 
@@ -23,11 +24,13 @@ type msgSubmitBatchProofVerifierInput struct {
 }
 
 type agreementSettlementUpdate struct {
-	BatchID      string                          `json:"batchId"`
-	OldStateRoot string                          `json:"oldStateRoot"`
-	NewStateRoot string                          `json:"newStateRoot"`
-	Deposits     []agreementSettlementDeposit    `json:"deposits"`
-	Withdrawals  []agreementSettlementWithdrawal `json:"withdrawals"`
+	BatchID              string                          `json:"batchId"`
+	OldStateRoot         string                          `json:"oldStateRoot"`
+	NewStateRoot         string                          `json:"newStateRoot"`
+	Deposits             []agreementSettlementDeposit    `json:"deposits"`
+	Withdrawals          []agreementSettlementWithdrawal `json:"withdrawals"`
+	Trades               []agreementTrade                `json:"trades"`
+	TradeBatchCommitment string                          `json:"tradeBatchCommitment"`
 }
 
 type agreementSettlementDeposit struct {
@@ -45,6 +48,24 @@ type agreementSettlementWithdrawal struct {
 	Destination     string `json:"destination"`
 	DestinationHash string `json:"destinationHash"`
 	Nullifier       string `json:"nullifier"`
+}
+
+type agreementTrade struct {
+	TradeID        string `json:"tradeId"`
+	Market         string `json:"market"`
+	MakerOrderID   string `json:"makerOrderId"`
+	TakerOrderID   string `json:"takerOrderId"`
+	OrderHash      string `json:"orderHash"`
+	OrderNullifier string `json:"orderNullifier"`
+	Owner          string `json:"owner"`
+	Denom          string `json:"denom"`
+	Side           string `json:"side"`
+	Amount         string `json:"amount"`
+	Price          string `json:"price"`
+	BaseQty        string `json:"baseQty"`
+	QuoteQty       string `json:"quoteQty"`
+	MakerFee       string `json:"makerFee"`
+	TakerFee       string `json:"takerFee"`
 }
 
 type agreementBatchCommitments struct {
@@ -120,13 +141,16 @@ func (k msgServer) validateSettlementUpdate(ctx context.Context, settlementUpdat
 		return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "oldStateRoot mismatch: got %s, current %s", settlementUpdate.OldStateRoot, currentRoot)
 	}
 
-	if len(settlementUpdate.Deposits) == 0 && len(settlementUpdate.Withdrawals) == 0 {
-		return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "settlement update must include at least one deposit or withdrawal")
+	if len(settlementUpdate.Deposits) == 0 && len(settlementUpdate.Withdrawals) == 0 && len(settlementUpdate.Trades) == 0 {
+		return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "settlement update must include at least one deposit, withdrawal, or trade")
 	}
 	if err := k.validateSettlementDeposits(ctx, settlementUpdate.Deposits); err != nil {
 		return nil, err
 	}
 	if err := k.validateSettlementWithdrawals(ctx, settlementUpdate.Withdrawals); err != nil {
+		return nil, err
+	}
+	if err := validateSettlementTrades(settlementUpdate.Trades, settlementUpdate.TradeBatchCommitment); err != nil {
 		return nil, err
 	}
 
@@ -145,6 +169,31 @@ func (k msgServer) validateSettlementUpdate(ctx context.Context, settlementUpdat
 	}
 
 	return publicInputs, nil
+}
+
+func validateSettlementTrades(trades []*types.Trade, tradeBatchCommitment []byte) error {
+	if len(trades) == 0 {
+		return nil
+	}
+	if len(tradeBatchCommitment) == 0 {
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "tradeBatchCommitment cannot be empty when trades are present")
+	}
+	seenTrades := make(map[string]struct{}, len(trades))
+	seenNullifiers := make(map[string]struct{}, len(trades))
+	for _, trade := range trades {
+		if err := trade.ValidateBasic(); err != nil {
+			return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+		}
+		if _, ok := seenTrades[trade.TradeId]; ok {
+			return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "duplicate tradeId %s", trade.TradeId)
+		}
+		if _, ok := seenNullifiers[trade.OrderNullifier]; ok {
+			return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "duplicate orderNullifier %s", trade.OrderNullifier)
+		}
+		seenTrades[trade.TradeId] = struct{}{}
+		seenNullifiers[trade.OrderNullifier] = struct{}{}
+	}
+	return nil
 }
 
 // check unprocessed deposit
@@ -300,11 +349,13 @@ func validateProofBundlePublicInputs(proofBundle []byte, publicInputs []string) 
 func buildMsgSubmitBatchProofVerifierInput(settlementUpdate types.SettlementUpdate, batchCommitments types.BatchCommitments, publicInputs []string) ([]byte, error) {
 	payload := msgSubmitBatchProofVerifierInput{
 		SettlementUpdate: agreementSettlementUpdate{
-			BatchID:      settlementUpdate.BatchId,
-			OldStateRoot: settlementUpdate.OldStateRoot,
-			NewStateRoot: settlementUpdate.NewStateRoot,
-			Deposits:     make([]agreementSettlementDeposit, 0, len(settlementUpdate.Deposits)),
-			Withdrawals:  make([]agreementSettlementWithdrawal, 0, len(settlementUpdate.Withdrawals)),
+			BatchID:              settlementUpdate.BatchId,
+			OldStateRoot:         settlementUpdate.OldStateRoot,
+			NewStateRoot:         settlementUpdate.NewStateRoot,
+			Deposits:             make([]agreementSettlementDeposit, 0, len(settlementUpdate.Deposits)),
+			Withdrawals:          make([]agreementSettlementWithdrawal, 0, len(settlementUpdate.Withdrawals)),
+			Trades:               make([]agreementTrade, 0, len(settlementUpdate.Trades)),
+			TradeBatchCommitment: bytesToHexString(settlementUpdate.TradeBatchCommitment),
 		},
 		BatchCommitments: agreementBatchCommitments{
 			DepositsRoot:        batchCommitments.DepositsRoot,
@@ -334,6 +385,32 @@ func buildMsgSubmitBatchProofVerifierInput(settlementUpdate types.SettlementUpda
 			Nullifier:       withdrawal.Nullifier,
 		})
 	}
+	for _, trade := range settlementUpdate.Trades {
+		payload.SettlementUpdate.Trades = append(payload.SettlementUpdate.Trades, agreementTrade{
+			TradeID:        trade.TradeId,
+			Market:         trade.Market,
+			MakerOrderID:   trade.MakerOrderId,
+			TakerOrderID:   trade.TakerOrderId,
+			OrderHash:      trade.OrderHash,
+			OrderNullifier: trade.OrderNullifier,
+			Owner:          trade.Owner,
+			Denom:          trade.Denom,
+			Side:           trade.Side,
+			Amount:         trade.Amount,
+			Price:          trade.Price,
+			BaseQty:        trade.BaseQty,
+			QuoteQty:       trade.QuoteQty,
+			MakerFee:       trade.MakerFee,
+			TakerFee:       trade.TakerFee,
+		})
+	}
 
 	return json.Marshal(payload)
+}
+
+func bytesToHexString(bz []byte) string {
+	if len(bz) == 0 {
+		return ""
+	}
+	return "0x" + hex.EncodeToString(bz)
 }
