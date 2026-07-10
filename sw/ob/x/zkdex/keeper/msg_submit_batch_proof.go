@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"reflect"
+	"strings"
 
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -73,7 +74,11 @@ type agreementBatchCommitments struct {
 	WithdrawalsRoot     string `json:"withdrawalsRoot"`
 	NullifiersRoot      string `json:"nullifiersRoot"`
 	WithdrawOutputsRoot string `json:"withdrawOutputsRoot"`
+	TradesRoot          string `json:"tradesRoot"`
+	OrdersRoot          string `json:"ordersRoot"`
 }
+
+const emptyPublicInputRootSentinel = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
 // verify proof
 func (k msgServer) SubmitBatchProof(ctx context.Context, req *types.MsgSubmitBatchProof) (*types.MsgSubmitBatchProofResponse, error) {
@@ -154,6 +159,28 @@ func (k msgServer) validateSettlementUpdate(ctx context.Context, settlementUpdat
 		return nil, err
 	}
 
+	publicInputs, err := derivePublicInputs(settlementUpdate, batchCommitments)
+	if err != nil {
+		return nil, err
+	}
+
+	return publicInputs, nil
+}
+
+func derivePublicInputs(settlementUpdate types.SettlementUpdate, batchCommitments types.BatchCommitments) ([]string, error) {
+	tradesRoot := batchCommitments.TradesRoot
+	ordersRoot := batchCommitments.OrdersRoot
+	if len(settlementUpdate.Trades) == 0 {
+		if tradesRoot != "" && tradesRoot != emptyPublicInputRootSentinel {
+			return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "tradesRoot must be empty-root sentinel when no trades are present")
+		}
+		if ordersRoot != "" && ordersRoot != emptyPublicInputRootSentinel {
+			return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "ordersRoot must be empty-root sentinel when no trades are present")
+		}
+		tradesRoot = emptyPublicInputRootSentinel
+		ordersRoot = emptyPublicInputRootSentinel
+	}
+
 	publicInputs := []string{
 		settlementUpdate.OldStateRoot,
 		settlementUpdate.NewStateRoot,
@@ -161,14 +188,30 @@ func (k msgServer) validateSettlementUpdate(ctx context.Context, settlementUpdat
 		batchCommitments.WithdrawalsRoot,
 		batchCommitments.NullifiersRoot,
 		batchCommitments.WithdrawOutputsRoot,
+		tradesRoot,
+		ordersRoot,
 	}
 	for i, input := range publicInputs {
-		if input == "" {
-			return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "public input %d cannot be empty", i)
+		if err := validatePublicInputField(i, input); err != nil {
+			return nil, err
 		}
 	}
 
 	return publicInputs, nil
+}
+
+func validatePublicInputField(index int, input string) error {
+	if input == "" {
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "public input %d cannot be empty", index)
+	}
+	raw := strings.TrimPrefix(input, "0x")
+	if len(raw) != 64 {
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "public input %d must be 32-byte hex", index)
+	}
+	if _, err := hex.DecodeString(raw); err != nil {
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "public input %d must be hex encoded", index)
+	}
+	return nil
 }
 
 func validateSettlementTrades(trades []*types.Trade, tradeBatchCommitment []byte) error {
@@ -362,6 +405,8 @@ func buildMsgSubmitBatchProofVerifierInput(settlementUpdate types.SettlementUpda
 			WithdrawalsRoot:     batchCommitments.WithdrawalsRoot,
 			NullifiersRoot:      batchCommitments.NullifiersRoot,
 			WithdrawOutputsRoot: batchCommitments.WithdrawOutputsRoot,
+			TradesRoot:          publicInputs[6],
+			OrdersRoot:          publicInputs[7],
 		},
 		PublicInputs: publicInputs,
 	}

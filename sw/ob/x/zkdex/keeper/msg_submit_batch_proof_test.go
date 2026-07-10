@@ -12,6 +12,20 @@ import (
 	"ob/x/zkdex/types"
 )
 
+var (
+	emptyPublicInputRootSentinel = "0x" + strings.Repeat("0", 64)
+	oldStateRootA                = "0x" + strings.Repeat("a", 64)
+	newStateRootB                = "0x" + strings.Repeat("b", 64)
+	oldStateRootC                = "0x" + strings.Repeat("c", 64)
+	newStateRootD                = "0x" + strings.Repeat("d", 64)
+	depositsRoot                 = "0x" + strings.Repeat("1", 64)
+	withdrawalsRoot              = "0x" + strings.Repeat("2", 64)
+	nullifiersRoot               = "0x" + strings.Repeat("3", 64)
+	withdrawOutputsRoot          = "0x" + strings.Repeat("4", 64)
+	tradesRoot                   = "0x" + strings.Repeat("5", 64)
+	ordersRoot                   = "0x" + strings.Repeat("6", 64)
+)
+
 func TestMsgSubmitBatchProofValidationAccepts(t *testing.T) {
 	f := initFixture(t)
 	creator := sample.AccAddress()
@@ -34,21 +48,27 @@ func TestMsgSubmitBatchProofValidationAccepts(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.True(t, resp.Accepted)
-	require.Equal(t, []string{
-		"0xrootA",
-		"0xrootB",
-		"0xdepositsRoot",
-		"0xwithdrawalsRoot",
-		"0xnullifiersRoot",
-		"0xwithdrawOutputsRoot",
-	}, resp.PublicInputs)
+	expectedPublicInputs := []string{
+		oldStateRootA,
+		newStateRootB,
+		depositsRoot,
+		withdrawalsRoot,
+		nullifiersRoot,
+		withdrawOutputsRoot,
+		emptyPublicInputRootSentinel,
+		emptyPublicInputRootSentinel,
+	}
+	require.Equal(t, expectedPublicInputs, resp.PublicInputs)
+	logPublicInputs(t, "accepted deposit+withdraw no-trade batch public inputs", resp.PublicInputs)
 	require.Equal(t, proofBundle, gotProofBundle)
-	// kiểm tra xem dữ liệu JSON mà Keeper tự đóng gói để ném vào hàm Verify có chứa đúng mảng publicInputs mong muốn hay không
-	require.Contains(t, string(gotVerifierUpdate), `"publicInputs":["0xrootA","0xrootB","0xdepositsRoot","0xwithdrawalsRoot","0xnullifiersRoot","0xwithdrawOutputsRoot"]`)
+	verifierInputJSON, err := json.MarshalIndent(json.RawMessage(gotVerifierUpdate), "", "  ")
+	require.NoError(t, err)
+	t.Logf("verifier input JSON sent to mock verifier:\n%s", verifierInputJSON)
+	require.Contains(t, string(gotVerifierUpdate), `"publicInputs":["`+strings.Join(expectedPublicInputs, `","`)+`"]`)
 
 	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
 	require.NoError(t, err)
-	require.Equal(t, "0xrootB", stateRoot)
+	require.Equal(t, newStateRootB, stateRoot)
 
 	processed, err := f.keeper.IsDepositProcessed(f.ctx, "dep-1")
 	require.NoError(t, err)
@@ -75,8 +95,8 @@ func TestMsgSubmitBatchProofValidationAccepts(t *testing.T) {
 
 	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, "batch-1")
 	require.NoError(t, err)
-	require.Equal(t, "0xrootA", batchRecord.OldStateRoot)
-	require.Equal(t, "0xrootB", batchRecord.NewStateRoot)
+	require.Equal(t, oldStateRootA, batchRecord.OldStateRoot)
+	require.Equal(t, newStateRootB, batchRecord.NewStateRoot)
 	require.Equal(t, []string{"dep-1"}, batchRecord.DepositIds)
 	require.Equal(t, []string{"wd-1"}, batchRecord.WithdrawIds)
 }
@@ -101,25 +121,91 @@ func TestMsgSubmitBatchProofAcceptsTradeOnlyBatch(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.True(t, resp.Accepted)
-	require.Equal(t, []string{
-		"0xrootC",
-		"0xrootD",
-		"0xemptyDepositsRoot",
-		"0xemptyWithdrawalsRoot",
-		"0xemptyNullifiersRoot",
-		"0xemptyWithdrawOutputsRoot",
-	}, resp.PublicInputs)
+	expectedPublicInputs := []string{
+		oldStateRootC,
+		newStateRootD,
+		emptyPublicInputRootSentinel,
+		emptyPublicInputRootSentinel,
+		emptyPublicInputRootSentinel,
+		emptyPublicInputRootSentinel,
+		tradesRoot,
+		ordersRoot,
+	}
+	require.Equal(t, expectedPublicInputs, resp.PublicInputs)
+	logPublicInputs(t, "accepted trade-only batch public inputs", resp.PublicInputs)
 	require.Contains(t, string(gotVerifierUpdate), `"tradeId":"trd-1"`)
 	require.Contains(t, string(gotVerifierUpdate), `"tradeBatchCommitment":"0x5452442d41544f4d2d555344542d62617463682d39"`)
+	require.Contains(t, string(gotVerifierUpdate), `"tradesRoot":"`+tradesRoot+`"`)
+	require.Contains(t, string(gotVerifierUpdate), `"ordersRoot":"`+ordersRoot+`"`)
 
 	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
 	require.NoError(t, err)
-	require.Equal(t, "0xrootD", stateRoot)
+	require.Equal(t, newStateRootD, stateRoot)
 
 	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, "batch-9")
 	require.NoError(t, err)
 	require.Empty(t, batchRecord.DepositIds)
 	require.Empty(t, batchRecord.WithdrawIds)
+}
+
+func TestMsgSubmitBatchProofAcceptsMixedDepositWithdrawTradeBatch(t *testing.T) {
+	f := initFixture(t)
+	creator := sample.AccAddress()
+	settlementUpdate, batchCommitments, proofBundle := validMixedMsgSubmitBatchProof(t, f)
+
+	var gotVerifierUpdate []byte
+	var gotProofBundle []byte
+	k := f.keeper.WithProofVerifier(types.ProofVerifierFunc(func(update []byte, proof []byte) bool {
+		gotVerifierUpdate = append([]byte(nil), update...)
+		gotProofBundle = append([]byte(nil), proof...)
+		return true
+	}))
+	msgServer := keeper.NewMsgServerImpl(k)
+
+	resp, err := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          creator,
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      proofBundle,
+	})
+	require.NoError(t, err)
+	require.True(t, resp.Accepted)
+	expectedPublicInputs := []string{
+		oldStateRootA,
+		newStateRootB,
+		depositsRoot,
+		withdrawalsRoot,
+		nullifiersRoot,
+		withdrawOutputsRoot,
+		tradesRoot,
+		ordersRoot,
+	}
+	require.Equal(t, expectedPublicInputs, resp.PublicInputs)
+	logPublicInputs(t, "accepted mixed deposit+withdraw+trade batch public inputs", resp.PublicInputs)
+	require.Equal(t, proofBundle, gotProofBundle)
+	require.Contains(t, string(gotVerifierUpdate), `"depositId":"dep-1"`)
+	require.Contains(t, string(gotVerifierUpdate), `"withdrawId":"wd-1"`)
+	require.Contains(t, string(gotVerifierUpdate), `"tradeId":"trd-1"`)
+	require.Contains(t, string(gotVerifierUpdate), `"tradesRoot":"`+tradesRoot+`"`)
+	require.Contains(t, string(gotVerifierUpdate), `"ordersRoot":"`+ordersRoot+`"`)
+	require.Contains(t, string(gotVerifierUpdate), `"publicInputs":["`+strings.Join(expectedPublicInputs, `","`)+`"]`)
+
+	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	require.Equal(t, newStateRootB, stateRoot)
+
+	processed, err := f.keeper.IsDepositProcessed(f.ctx, "dep-1")
+	require.NoError(t, err)
+	require.True(t, processed)
+
+	nullifierUsed, err := f.keeper.IsNullifierUsed(f.ctx, "0xmocknullifier")
+	require.NoError(t, err)
+	require.True(t, nullifierUsed)
+
+	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, "batch-1")
+	require.NoError(t, err)
+	require.Equal(t, []string{"dep-1"}, batchRecord.DepositIds)
+	require.Equal(t, []string{"wd-1"}, batchRecord.WithdrawIds)
 }
 
 func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
@@ -131,8 +217,8 @@ func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
 		{
 			name: "old root mismatch",
 			mutate: func(t *testing.T, f *fixture, settlementUpdate *types.SettlementUpdate, batchCommitments *types.BatchCommitments, proofBundle *[]byte) {
-				settlementUpdate.OldStateRoot = "0xwrong"
-				*proofBundle = proofBundleJSON(t, []string{"0xwrong", settlementUpdate.NewStateRoot, batchCommitments.DepositsRoot, batchCommitments.WithdrawalsRoot, batchCommitments.NullifiersRoot, batchCommitments.WithdrawOutputsRoot})
+				settlementUpdate.OldStateRoot = "0x" + strings.Repeat("f", 64)
+				*proofBundle = proofBundleJSON(t, noTradePublicInputs(*settlementUpdate, *batchCommitments))
 			},
 			errText: "oldStateRoot mismatch",
 		},
@@ -174,9 +260,27 @@ func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
 		{
 			name: "proof public inputs mismatch",
 			mutate: func(t *testing.T, f *fixture, settlementUpdate *types.SettlementUpdate, batchCommitments *types.BatchCommitments, proofBundle *[]byte) {
-				*proofBundle = proofBundleJSON(t, []string{settlementUpdate.OldStateRoot, "0xtampered", batchCommitments.DepositsRoot, batchCommitments.WithdrawalsRoot, batchCommitments.NullifiersRoot, batchCommitments.WithdrawOutputsRoot})
+				publicInputs := noTradePublicInputs(*settlementUpdate, *batchCommitments)
+				publicInputs[1] = "0x" + strings.Repeat("e", 64)
+				*proofBundle = proofBundleJSON(t, publicInputs)
 			},
 			errText: "publicInputs do not match",
+		},
+		{
+			name: "bad public input length",
+			mutate: func(t *testing.T, f *fixture, settlementUpdate *types.SettlementUpdate, batchCommitments *types.BatchCommitments, proofBundle *[]byte) {
+				batchCommitments.DepositsRoot = "0xshort"
+				*proofBundle = proofBundleJSON(t, noTradePublicInputs(*settlementUpdate, *batchCommitments))
+			},
+			errText: "public input 2 must be 32-byte hex",
+		},
+		{
+			name: "no-trade bad trades root",
+			mutate: func(t *testing.T, f *fixture, settlementUpdate *types.SettlementUpdate, batchCommitments *types.BatchCommitments, proofBundle *[]byte) {
+				batchCommitments.TradesRoot = tradesRoot
+				*proofBundle = proofBundleJSON(t, noTradePublicInputs(*settlementUpdate, *batchCommitments))
+			},
+			errText: "tradesRoot must be empty-root sentinel",
 		},
 		{
 			name: "verifier rejects",
@@ -213,20 +317,22 @@ func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
 func validTradeOnlyMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate, types.BatchCommitments, []byte) {
 	t.Helper()
 
-	require.NoError(t, f.keeper.SetStateRoot(f.ctx, "0xrootC"))
+	require.NoError(t, f.keeper.SetStateRoot(f.ctx, oldStateRootC))
 
 	settlementUpdate := types.SettlementUpdate{
 		BatchId:              "batch-9",
-		OldStateRoot:         "0xrootC",
-		NewStateRoot:         "0xrootD",
+		OldStateRoot:         oldStateRootC,
+		NewStateRoot:         newStateRootD,
 		Trades:               []*types.Trade{agreementTrade()},
 		TradeBatchCommitment: []byte("TRD-ATOM-USDT-batch-9"),
 	}
 	batchCommitments := types.BatchCommitments{
-		DepositsRoot:        "0xemptyDepositsRoot",
-		WithdrawalsRoot:     "0xemptyWithdrawalsRoot",
-		NullifiersRoot:      "0xemptyNullifiersRoot",
-		WithdrawOutputsRoot: "0xemptyWithdrawOutputsRoot",
+		DepositsRoot:        emptyPublicInputRootSentinel,
+		WithdrawalsRoot:     emptyPublicInputRootSentinel,
+		NullifiersRoot:      emptyPublicInputRootSentinel,
+		WithdrawOutputsRoot: emptyPublicInputRootSentinel,
+		TradesRoot:          tradesRoot,
+		OrdersRoot:          ordersRoot,
 	}
 	proofBundle := proofBundleJSON(t, []string{
 		settlementUpdate.OldStateRoot,
@@ -235,6 +341,30 @@ func validTradeOnlyMsgSubmitBatchProof(t *testing.T, f *fixture) (types.Settleme
 		batchCommitments.WithdrawalsRoot,
 		batchCommitments.NullifiersRoot,
 		batchCommitments.WithdrawOutputsRoot,
+		batchCommitments.TradesRoot,
+		batchCommitments.OrdersRoot,
+	})
+
+	return settlementUpdate, batchCommitments, proofBundle
+}
+
+func validMixedMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate, types.BatchCommitments, []byte) {
+	t.Helper()
+
+	settlementUpdate, batchCommitments, _ := validMsgSubmitBatchProof(t, f)
+	settlementUpdate.Trades = []*types.Trade{agreementTrade()}
+	settlementUpdate.TradeBatchCommitment = []byte("TRD-MIXED-ATOM-USDT-batch-1")
+	batchCommitments.TradesRoot = tradesRoot
+	batchCommitments.OrdersRoot = ordersRoot
+	proofBundle := proofBundleJSON(t, []string{
+		settlementUpdate.OldStateRoot,
+		settlementUpdate.NewStateRoot,
+		batchCommitments.DepositsRoot,
+		batchCommitments.WithdrawalsRoot,
+		batchCommitments.NullifiersRoot,
+		batchCommitments.WithdrawOutputsRoot,
+		batchCommitments.TradesRoot,
+		batchCommitments.OrdersRoot,
 	})
 
 	return settlementUpdate, batchCommitments, proofBundle
@@ -243,7 +373,7 @@ func validTradeOnlyMsgSubmitBatchProof(t *testing.T, f *fixture) (types.Settleme
 func validMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate, types.BatchCommitments, []byte) {
 	t.Helper()
 
-	require.NoError(t, f.keeper.SetStateRoot(f.ctx, "0xrootA"))
+	require.NoError(t, f.keeper.SetStateRoot(f.ctx, oldStateRootA))
 	require.NoError(t, f.keeper.SetDepositRecord(f.ctx, "dep-1", types.DepositRecord{
 		DepositId:     "dep-1",
 		Owner:         "cosmos1alice",
@@ -255,8 +385,8 @@ func validMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate,
 
 	settlementUpdate := types.SettlementUpdate{
 		BatchId:      "batch-1",
-		OldStateRoot: "0xrootA",
-		NewStateRoot: "0xrootB",
+		OldStateRoot: oldStateRootA,
+		NewStateRoot: newStateRootB,
 		Deposits: []*types.SettlementDeposit{
 			{
 				DepositId: "dep-1",
@@ -278,21 +408,62 @@ func validMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate,
 		},
 	}
 	batchCommitments := types.BatchCommitments{
-		DepositsRoot:        "0xdepositsRoot",
-		WithdrawalsRoot:     "0xwithdrawalsRoot",
-		NullifiersRoot:      "0xnullifiersRoot",
-		WithdrawOutputsRoot: "0xwithdrawOutputsRoot",
+		DepositsRoot:        depositsRoot,
+		WithdrawalsRoot:     withdrawalsRoot,
+		NullifiersRoot:      nullifiersRoot,
+		WithdrawOutputsRoot: withdrawOutputsRoot,
 	}
-	proofBundle := proofBundleJSON(t, []string{
+	proofBundle := proofBundleJSON(t, noTradePublicInputs(settlementUpdate, batchCommitments))
+
+	return settlementUpdate, batchCommitments, proofBundle
+}
+
+func noTradePublicInputs(settlementUpdate types.SettlementUpdate, batchCommitments types.BatchCommitments) []string {
+	return []string{
 		settlementUpdate.OldStateRoot,
 		settlementUpdate.NewStateRoot,
 		batchCommitments.DepositsRoot,
 		batchCommitments.WithdrawalsRoot,
 		batchCommitments.NullifiersRoot,
 		batchCommitments.WithdrawOutputsRoot,
-	})
+		emptyPublicInputRootSentinel,
+		emptyPublicInputRootSentinel,
+	}
+}
 
-	return settlementUpdate, batchCommitments, proofBundle
+func logPublicInputs(t *testing.T, title string, publicInputs []string) {
+	t.Helper()
+
+	type publicInputLog struct {
+		Index int    `json:"index"`
+		Name  string `json:"name"`
+		Value string `json:"value"`
+	}
+	names := []string{
+		"oldStateRoot",
+		"newStateRoot",
+		"depositsRoot",
+		"withdrawalsRoot",
+		"nullifiersRoot",
+		"withdrawOutputsRoot",
+		"tradesRoot",
+		"ordersRoot",
+	}
+	rows := make([]publicInputLog, 0, len(publicInputs))
+	for i, value := range publicInputs {
+		name := "unknown"
+		if i < len(names) {
+			name = names[i]
+		}
+		rows = append(rows, publicInputLog{
+			Index: i,
+			Name:  name,
+			Value: value,
+		})
+	}
+	bz, err := json.MarshalIndent(rows, "", "  ")
+	require.NoError(t, err)
+	t.Logf("%s:\n%s", title, bz)
 }
 
 func agreementTrade() *types.Trade {

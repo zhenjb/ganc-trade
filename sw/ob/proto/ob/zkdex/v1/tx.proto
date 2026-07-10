@@ -126,6 +126,8 @@ message BatchCommitments {
   string withdrawals_root = 2 [json_name = "withdrawalsRoot"];
   string nullifiers_root = 3 [json_name = "nullifiersRoot"];
   string withdraw_outputs_root = 4 [json_name = "withdrawOutputsRoot"];
+  string trades_root = 5 [json_name = "tradesRoot"];
+  string orders_root = 6 [json_name = "ordersRoot"];
 }
 
 // MsgSubmitBatchProof is the Msg/SubmitBatchProof request type.
