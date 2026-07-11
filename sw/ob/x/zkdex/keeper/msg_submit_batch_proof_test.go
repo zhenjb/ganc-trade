@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/stretchr/testify/require"
 
 	"ob/testutil/sample"
@@ -25,6 +26,7 @@ var (
 	withdrawOutputsRoot          = "0x" + strings.Repeat("4", 64)
 	tradesRoot                   = "0x" + strings.Repeat("5", 64)
 	ordersRoot                   = "0x" + strings.Repeat("6", 64)
+	nonCrossingTradesRoot        = "0x" + strings.Repeat("7", 64)
 )
 
 func TestMsgSubmitBatchProofValidationAccepts(t *testing.T) {
@@ -319,6 +321,7 @@ func TestMsgSubmitBatchProofRejectsReusedOrderNullifierBeforeVerify(t *testing.T
 		ProofBundle:      proofBundle,
 	})
 	require.Error(t, submitErr)
+	require.ErrorIs(t, submitErr, types.ErrOrderNullifierReused)
 	require.ErrorContains(t, submitErr, "orderNullifier")
 	require.ErrorContains(t, submitErr, "already used")
 	// Bằng 0: tức là hệ thống đã reject ngay từ vòng validate nullifier
@@ -336,6 +339,49 @@ func TestMsgSubmitBatchProofRejectsReusedOrderNullifierBeforeVerify(t *testing.T
 	require.False(t, batchExists)
 	logSubmitBatchProofState(t, "rejected reused order-nullifier state", f, settlementUpdate, nil)
 	t.Logf("reused orderNullifier reject detail: orderNullifier=%s verifierCalls=%d err=%v", orderNullifier, verifierCalls, submitErr)
+}
+
+func TestMsgSubmitBatchProofONCHAINT07RejectsNonCrossingBadTradeRootWithoutMutatingState(t *testing.T) {
+	f := initFixture(t)
+	settlementUpdate, batchCommitments, _ := validTradeOnlyMsgSubmitBatchProof(t, f)
+	batchCommitments.TradesRoot = nonCrossingTradesRoot
+	proofBundle := proofBundleJSON(t, tradePublicInputs(settlementUpdate, batchCommitments))
+
+	var verifierInput msgSubmitBatchProofVerifierInputLog
+	verifierCalls := 0
+	k := f.keeper.WithProofVerifier(types.ProofVerifierFunc(func(update []byte, proof []byte) bool {
+		verifierCalls++
+		require.NoError(t, json.Unmarshal(update, &verifierInput))
+		t.Logf("ONCHAIN-T07 mock verifier input for non-crossing vector: tradesRoot=%s ordersRoot=%s tradeId=%s price=%s proofBundle=%s",
+			verifierInput.BatchCommitments.TradesRoot,
+			verifierInput.BatchCommitments.OrdersRoot,
+			verifierInput.SettlementUpdate.Trades[0].TradeID,
+			verifierInput.SettlementUpdate.Trades[0].Price,
+			string(proof),
+		)
+		return verifierInput.BatchCommitments.TradesRoot != nonCrossingTradesRoot
+	}))
+	msgServer := keeper.NewMsgServerImpl(k)
+
+	beforeRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	t.Logf("ONCHAIN-T07 before non-crossing reject: currentStateRoot=%s batchId=%s badTradesRoot=%s ordersRoot=%s",
+		beforeRoot, settlementUpdate.BatchId, batchCommitments.TradesRoot, batchCommitments.OrdersRoot)
+
+	_, submitErr := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          sample.AccAddress(),
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      proofBundle,
+	})
+	require.Error(t, submitErr)
+	require.ErrorIs(t, submitErr, sdkerrors.ErrUnauthorized)
+	require.ErrorContains(t, submitErr, "proof verification failed")
+	require.Equal(t, 1, verifierCalls)
+
+	requireTradeBatchRejectInvariant(t, "ONCHAIN-T07 non-crossing/bad-trade-root reject state", f, settlementUpdate)
+	t.Logf("ONCHAIN-T07 non-crossing reject detail: verifierCalls=%d tradeId=%s price=%s badTradesRoot=%s err=%v",
+		verifierCalls, settlementUpdate.Trades[0].TradeId, settlementUpdate.Trades[0].Price, batchCommitments.TradesRoot, submitErr)
 }
 
 func TestMsgSubmitBatchProofRejectsDuplicateOrderNullifierInBatch(t *testing.T) {
@@ -391,6 +437,49 @@ func TestMsgSubmitBatchProofRejectsBadTradeProofWithoutMutatingState(t *testing.
 	require.False(t, batchExists)
 	logSubmitBatchProofState(t, "rejected bad trade proof state", f, settlementUpdate, nil)
 	t.Logf("bad trade proof reject detail: proofBundle=%s err=%v", string(proofBundle), submitErr)
+}
+
+func TestMsgSubmitBatchProofONCHAINT07RejectsEmptyProofBundleWithoutMutatingState(t *testing.T) {
+	f := initFixture(t)
+	settlementUpdate, batchCommitments, _ := validTradeOnlyMsgSubmitBatchProof(t, f)
+	msgServer := keeper.NewMsgServerImpl(f.keeper.WithProofVerifier(types.StubProofVerifier{Accept: true}))
+
+	_, submitErr := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          sample.AccAddress(),
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      nil,
+	})
+	require.Error(t, submitErr)
+	require.ErrorIs(t, submitErr, sdkerrors.ErrInvalidRequest)
+	require.ErrorContains(t, submitErr, "proofBundle cannot be empty")
+
+	requireTradeBatchRejectInvariant(t, "ONCHAIN-T07 empty proof reject state", f, settlementUpdate)
+	t.Logf("ONCHAIN-T07 empty proof reject detail: proofBundleLen=%d batchId=%s err=%v", 0, settlementUpdate.BatchId, submitErr)
+}
+
+func TestMsgSubmitBatchProofONCHAINT07RejectsMixedBatchWhenTradeProofFailsAllOrNothing(t *testing.T) {
+	f := initFixture(t)
+	settlementUpdate, batchCommitments, proofBundle := validMixedMsgSubmitBatchProof(t, f)
+	msgServer := keeper.NewMsgServerImpl(f.keeper.WithProofVerifier(types.StubProofVerifier{Accept: false}))
+
+	_, submitErr := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          sample.AccAddress(),
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      proofBundle,
+	})
+	require.Error(t, submitErr)
+	require.ErrorIs(t, submitErr, sdkerrors.ErrUnauthorized)
+	require.ErrorContains(t, submitErr, "proof verification failed")
+
+	requireMixedBatchRejectInvariant(t, "ONCHAIN-T07 mixed batch bad-proof all-or-nothing state", f, settlementUpdate)
+	t.Logf("ONCHAIN-T07 mixed all-or-nothing reject detail: depositId=%s withdrawId=%s tradeId=%s proofBundle=%s err=%v",
+		settlementUpdate.Deposits[0].DepositId,
+		settlementUpdate.Withdrawals[0].WithdrawId,
+		settlementUpdate.Trades[0].TradeId,
+		string(proofBundle),
+		submitErr)
 }
 
 func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
@@ -616,6 +705,33 @@ func noTradePublicInputs(settlementUpdate types.SettlementUpdate, batchCommitmen
 	}
 }
 
+func tradePublicInputs(settlementUpdate types.SettlementUpdate, batchCommitments types.BatchCommitments) []string {
+	return []string{
+		settlementUpdate.OldStateRoot,
+		settlementUpdate.NewStateRoot,
+		batchCommitments.DepositsRoot,
+		batchCommitments.WithdrawalsRoot,
+		batchCommitments.NullifiersRoot,
+		batchCommitments.WithdrawOutputsRoot,
+		batchCommitments.TradesRoot,
+		batchCommitments.OrdersRoot,
+	}
+}
+
+type msgSubmitBatchProofVerifierInputLog struct {
+	SettlementUpdate struct {
+		Trades []struct {
+			TradeID string `json:"tradeId"`
+			Price   string `json:"price"`
+		} `json:"trades"`
+	} `json:"settlementUpdate"`
+	BatchCommitments struct {
+		TradesRoot string `json:"tradesRoot"`
+		OrdersRoot string `json:"ordersRoot"`
+	} `json:"batchCommitments"`
+	PublicInputs []string `json:"publicInputs"`
+}
+
 func logPublicInputs(t *testing.T, title string, publicInputs []string) {
 	t.Helper()
 
@@ -802,6 +918,97 @@ func logSubmitBatchProofState(t *testing.T, title string, f *fixture, settlement
 	}, "", "  ")
 	require.NoError(t, err)
 	t.Logf("%s:\n%s", title, bz)
+}
+
+func requireTradeBatchRejectInvariant(t *testing.T, title string, f *fixture, settlementUpdate types.SettlementUpdate) {
+	t.Helper()
+
+	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	require.Equal(t, settlementUpdate.OldStateRoot, stateRoot)
+
+	batchExists, err := f.keeper.HasBatchRecord(f.ctx, settlementUpdate.BatchId)
+	require.NoError(t, err)
+	require.False(t, batchExists)
+
+	type orderNullifierLog struct {
+		TradeID        string `json:"tradeId"`
+		OrderNullifier string `json:"orderNullifier"`
+		Used           bool   `json:"used"`
+	}
+	orderNullifiers := make([]orderNullifierLog, 0, len(settlementUpdate.Trades))
+	for _, trade := range settlementUpdate.Trades {
+		used, err := f.keeper.IsOrderNullifierUsed(f.ctx, trade.OrderNullifier)
+		require.NoError(t, err)
+		require.False(t, used)
+		orderNullifiers = append(orderNullifiers, orderNullifierLog{
+			TradeID:        trade.TradeId,
+			OrderNullifier: trade.OrderNullifier,
+			Used:           used,
+		})
+	}
+
+	bz, err := json.MarshalIndent(map[string]any{
+		"batchId":         settlementUpdate.BatchId,
+		"currentRoot":     stateRoot,
+		"expectedOld":     settlementUpdate.OldStateRoot,
+		"expectedNew":     settlementUpdate.NewStateRoot,
+		"batchExists":     batchExists,
+		"orderNullifiers": orderNullifiers,
+	}, "", "  ")
+	require.NoError(t, err)
+	t.Logf("%s:\n%s", title, bz)
+}
+
+func requireMixedBatchRejectInvariant(t *testing.T, title string, f *fixture, settlementUpdate types.SettlementUpdate) {
+	t.Helper()
+
+	requireTradeBatchRejectInvariant(t, title, f, settlementUpdate)
+
+	type depositLog struct {
+		DepositID string `json:"depositId"`
+		Processed bool   `json:"processed"`
+	}
+	deposits := make([]depositLog, 0, len(settlementUpdate.Deposits))
+	for _, deposit := range settlementUpdate.Deposits {
+		processed, err := f.keeper.IsDepositProcessed(f.ctx, deposit.DepositId)
+		require.NoError(t, err)
+		require.False(t, processed)
+		deposits = append(deposits, depositLog{
+			DepositID: deposit.DepositId,
+			Processed: processed,
+		})
+	}
+
+	type withdrawalLog struct {
+		WithdrawID    string `json:"withdrawId"`
+		Nullifier     string `json:"nullifier"`
+		NullifierUsed bool   `json:"nullifierUsed"`
+		RecordExists  bool   `json:"recordExists"`
+	}
+	withdrawals := make([]withdrawalLog, 0, len(settlementUpdate.Withdrawals))
+	for _, withdrawal := range settlementUpdate.Withdrawals {
+		nullifierUsed, err := f.keeper.IsNullifierUsed(f.ctx, withdrawal.Nullifier)
+		require.NoError(t, err)
+		require.False(t, nullifierUsed)
+		recordExists, err := f.keeper.HasWithdrawRecord(f.ctx, withdrawal.WithdrawId)
+		require.NoError(t, err)
+		require.False(t, recordExists)
+		withdrawals = append(withdrawals, withdrawalLog{
+			WithdrawID:    withdrawal.WithdrawId,
+			Nullifier:     withdrawal.Nullifier,
+			NullifierUsed: nullifierUsed,
+			RecordExists:  recordExists,
+		})
+	}
+
+	bz, err := json.MarshalIndent(map[string]any{
+		"batchId":     settlementUpdate.BatchId,
+		"deposits":    deposits,
+		"withdrawals": withdrawals,
+	}, "", "  ")
+	require.NoError(t, err)
+	t.Logf("%s core-operation invariant:\n%s", title, bz)
 }
 
 func agreementTrade() *types.Trade {
