@@ -9,9 +9,20 @@ import (
 )
 
 func TestGenesis(t *testing.T) {
+	batchRecord := types.BatchRecord{
+		BatchId:              "batch-genesis-1",
+		OldStateRoot:         types.DefaultStateRoot,
+		NewStateRoot:         "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+		TradeIds:             []string{"trd-genesis-1"},
+		TradesRoot:           "0x5555555555555555555555555555555555555555555555555555555555555555",
+		OrdersRoot:           "0x6666666666666666666666666666666666666666666666666666666666666666",
+		TradeBatchCommitment: "0x5452442d47454e455349532d31",
+		TradeCount:           1,
+	}
 	genesisState := types.GenesisState{
 		Params:           types.DefaultParams(),
-		CurrentStateRoot: "0xrootA",
+		CurrentStateRoot: types.DefaultStateRoot,
+		BatchRecords:     []*types.BatchRecord{&batchRecord},
 	}
 
 	f := initFixture(t)
@@ -23,4 +34,5 @@ func TestGenesis(t *testing.T) {
 
 	require.Equal(t, genesisState.Params, got.Params)
 	require.Equal(t, genesisState.CurrentStateRoot, got.CurrentStateRoot)
+	require.Equal(t, genesisState.BatchRecords, got.BatchRecords)
 }

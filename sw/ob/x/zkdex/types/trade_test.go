@@ -13,8 +13,8 @@ import (
 func TestSettlementUpdateRoundTripWithTrade(t *testing.T) {
 	update := types.SettlementUpdate{
 		BatchId:              "batch-9",
-		OldStateRoot:         "0xrootC",
-		NewStateRoot:         "0xrootD",
+		OldStateRoot:         "0x" + strings.Repeat("c", 64),
+		NewStateRoot:         "0x" + strings.Repeat("d", 64),
 		Trades:               []*types.Trade{agreementTrade()},
 		TradeBatchCommitment: []byte("TRD-ATOM-USDT-batch-9"),
 	}
@@ -36,8 +36,8 @@ func TestSettlementUpdateRoundTripWithTrade(t *testing.T) {
 func TestSettlementUpdateRoundTripWithoutTrade(t *testing.T) {
 	update := types.SettlementUpdate{
 		BatchId:      "batch-legacy",
-		OldStateRoot: "0xrootA",
-		NewStateRoot: "0xrootB",
+		OldStateRoot: types.DefaultStateRoot,
+		NewStateRoot: "0x" + strings.Repeat("b", 64),
 		Deposits: []*types.SettlementDeposit{
 			{
 				DepositId: "dep-1",

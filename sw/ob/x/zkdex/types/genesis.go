@@ -2,11 +2,13 @@ package types
 
 import "fmt"
 
+const DefaultStateRoot = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
 // DefaultGenesis returns the default genesis state
 func DefaultGenesis() *GenesisState {
 	return &GenesisState{
 		Params:           DefaultParams(),
-		CurrentStateRoot: "0xrootA", // MOCK TEST GIÁ TRỊ ROOT BAN ĐẦU
+		CurrentStateRoot: DefaultStateRoot,
 	}
 }
 

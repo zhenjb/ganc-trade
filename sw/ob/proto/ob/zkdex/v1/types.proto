@@ -47,6 +47,15 @@ message BatchRecord {
   repeated string deposit_ids = 4;
   repeated string withdraw_ids = 5;
   int64 created_height = 6;
+  repeated string trade_ids = 7;
+  string deposits_root = 8;
+  string withdrawals_root = 9;
+  string nullifiers_root = 10;
+  string withdraw_outputs_root = 11;
+  string trades_root = 12;
+  string orders_root = 13;
+  string trade_batch_commitment = 14;
+  uint64 trade_count = 15;
 }
 
 // EventDeposit is emitted when a deposit is created

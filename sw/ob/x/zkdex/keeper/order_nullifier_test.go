@@ -39,7 +39,7 @@ func TestOrderNullifierGenesisRoundTrip(t *testing.T) {
 	f := initFixture(t)
 	genesisState := types.GenesisState{
 		Params:           types.DefaultParams(),
-		CurrentStateRoot: "0xrootA",
+		CurrentStateRoot: types.DefaultStateRoot,
 		OrderNullifierUsed: []string{
 			"0x" + strings.Repeat("A", 64),
 			strings.Repeat("b", 64),
@@ -75,8 +75,8 @@ func TestOrderNullifierAgreementOutput(t *testing.T) {
 		Actor:            "P1",
 		Message:          "MsgSubmitBatchProof.settlementUpdate.trades[]",
 		BatchID:          "batch-demo-1",
-		OldStateRoot:     "0xrootA",
-		NewStateRoot:     "0xrootB",
+		OldStateRoot:     types.DefaultStateRoot,
+		NewStateRoot:     "0x" + strings.Repeat("d", 64),
 		OrderHash:        "0x" + strings.Repeat("a", 64),
 		OrderNullifier:   orderNullifier,
 		NullifierStoreOp: "mark used after proof verification passes",

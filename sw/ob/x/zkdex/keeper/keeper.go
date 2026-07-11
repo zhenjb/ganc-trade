@@ -143,7 +143,7 @@ func (k Keeper) GetStateRoot(ctx context.Context) (string, error) {
 	root, err := k.StateRoot.Get(ctx)
 	if err != nil {
 		// If not found, return default
-		return "0xrootA", nil
+		return types.DefaultStateRoot, nil
 	}
 	return root, nil
 }
@@ -230,4 +230,16 @@ func (k Keeper) GetBatchRecord(ctx context.Context, batchId string) (types.Batch
 
 func (k Keeper) HasBatchRecord(ctx context.Context, batchId string) (bool, error) {
 	return k.BatchRecords.Has(ctx, batchId)
+}
+
+func (k Keeper) GetAllBatchRecords(ctx context.Context) ([]*types.BatchRecord, error) {
+	records := make([]*types.BatchRecord, 0)
+	if err := k.BatchRecords.Walk(ctx, nil, func(_ string, record types.BatchRecord) (bool, error) {
+		recordCopy := record
+		records = append(records, &recordCopy)
+		return false, nil
+	}); err != nil {
+		return nil, err
+	}
+	return records, nil
 }

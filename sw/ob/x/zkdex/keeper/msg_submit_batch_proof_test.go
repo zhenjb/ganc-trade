@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
 	"ob/testutil/sample"
@@ -99,6 +100,15 @@ func TestMsgSubmitBatchProofValidationAccepts(t *testing.T) {
 	require.Equal(t, newStateRootB, batchRecord.NewStateRoot)
 	require.Equal(t, []string{"dep-1"}, batchRecord.DepositIds)
 	require.Equal(t, []string{"wd-1"}, batchRecord.WithdrawIds)
+	require.Empty(t, batchRecord.TradeIds)
+	require.Equal(t, depositsRoot, batchRecord.DepositsRoot)
+	require.Equal(t, withdrawalsRoot, batchRecord.WithdrawalsRoot)
+	require.Equal(t, nullifiersRoot, batchRecord.NullifiersRoot)
+	require.Equal(t, withdrawOutputsRoot, batchRecord.WithdrawOutputsRoot)
+	require.Equal(t, emptyPublicInputRootSentinel, batchRecord.TradesRoot)
+	require.Equal(t, emptyPublicInputRootSentinel, batchRecord.OrdersRoot)
+	require.Equal(t, uint64(0), batchRecord.TradeCount)
+	logBatchRecord(t, "accepted deposit+withdraw no-trade batch record", batchRecord)
 }
 
 func TestMsgSubmitBatchProofAcceptsTradeOnlyBatch(t *testing.T) {
@@ -142,10 +152,74 @@ func TestMsgSubmitBatchProofAcceptsTradeOnlyBatch(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, newStateRootD, stateRoot)
 
+	orderNullifierUsed, err := f.keeper.IsOrderNullifierUsed(f.ctx, agreementTrade().OrderNullifier)
+	require.NoError(t, err)
+	require.True(t, orderNullifierUsed)
+	logSubmitBatchProofState(t, "accepted trade-only batch state", f, settlementUpdate, resp.PublicInputs)
+
 	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, "batch-9")
 	require.NoError(t, err)
 	require.Empty(t, batchRecord.DepositIds)
 	require.Empty(t, batchRecord.WithdrawIds)
+	require.Equal(t, []string{"trd-1"}, batchRecord.TradeIds)
+	require.Equal(t, emptyPublicInputRootSentinel, batchRecord.DepositsRoot)
+	require.Equal(t, emptyPublicInputRootSentinel, batchRecord.WithdrawalsRoot)
+	require.Equal(t, emptyPublicInputRootSentinel, batchRecord.NullifiersRoot)
+	require.Equal(t, emptyPublicInputRootSentinel, batchRecord.WithdrawOutputsRoot)
+	require.Equal(t, tradesRoot, batchRecord.TradesRoot)
+	require.Equal(t, ordersRoot, batchRecord.OrdersRoot)
+	require.Equal(t, "0x5452442d41544f4d2d555344542d62617463682d39", batchRecord.TradeBatchCommitment)
+	require.Equal(t, uint64(1), batchRecord.TradeCount)
+	logBatchRecord(t, "accepted trade-only batch record", batchRecord)
+	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, newStateRootD, "1")
+}
+
+func TestMsgSubmitBatchProofONCHAINT05ApplyTradeUpdateDoD(t *testing.T) {
+	f := initFixture(t)
+	settlementUpdate, batchCommitments, proofBundle := validTradeOnlyMsgSubmitBatchProof(t, f)
+	msgServer := keeper.NewMsgServerImpl(f.keeper.WithProofVerifier(types.StubProofVerifier{Accept: true}))
+
+	beforeStateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	require.Equal(t, settlementUpdate.OldStateRoot, beforeStateRoot)
+	t.Logf("ONCHAIN-T05 before apply: currentStateRoot=%s oldStateRoot=%s newStateRoot=%s", beforeStateRoot, settlementUpdate.OldStateRoot, settlementUpdate.NewStateRoot)
+	logOrderNullifiersUsed(t, "ONCHAIN-T05 before apply orderNullifiers", f, settlementUpdate.Trades)
+
+	resp, err := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          sample.AccAddress(),
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      proofBundle,
+	})
+	require.NoError(t, err)
+	require.True(t, resp.Accepted)
+
+	// ONCHAIN-T05 DoD: sau apply, currentStateRoot = newStateRoot.
+	currentStateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	require.Equal(t, settlementUpdate.NewStateRoot, currentStateRoot)
+	t.Logf("ONCHAIN-T05 currentStateRoot applied: currentStateRoot=%s newStateRoot=%s", currentStateRoot, settlementUpdate.NewStateRoot)
+
+	// ONCHAIN-T05 DoD: mọi orderNullifier trong batch trả về used=true.
+	for _, trade := range settlementUpdate.Trades {
+		used, err := f.keeper.IsOrderNullifierUsed(f.ctx, trade.OrderNullifier)
+		require.NoError(t, err)
+		require.True(t, used)
+		t.Logf("ONCHAIN-T05 orderNullifier used: tradeId=%s orderNullifier=%s used=%v", trade.TradeId, trade.OrderNullifier, used)
+	}
+	logOrderNullifiersUsed(t, "ONCHAIN-T05 after apply orderNullifiers", f, settlementUpdate.Trades)
+
+	// ONCHAIN-T05 DoD: event TradeSettled xuất hiện trong ctx.EventManager với đúng attribute.
+	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, settlementUpdate.NewStateRoot, "1")
+
+	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, settlementUpdate.BatchId)
+	require.NoError(t, err)
+	require.Equal(t, []string{"trd-1"}, batchRecord.TradeIds)
+	require.Equal(t, tradesRoot, batchRecord.TradesRoot)
+	require.Equal(t, ordersRoot, batchRecord.OrdersRoot)
+	require.Equal(t, uint64(len(settlementUpdate.Trades)), batchRecord.TradeCount)
+	logSubmitBatchProofState(t, "ONCHAIN-T05 applied trade update state", f, settlementUpdate, resp.PublicInputs)
+	logBatchRecord(t, "ONCHAIN-T05 applied trade update batch record", batchRecord)
 }
 
 func TestMsgSubmitBatchProofAcceptsMixedDepositWithdrawTradeBatch(t *testing.T) {
@@ -202,10 +276,121 @@ func TestMsgSubmitBatchProofAcceptsMixedDepositWithdrawTradeBatch(t *testing.T) 
 	require.NoError(t, err)
 	require.True(t, nullifierUsed)
 
+	orderNullifierUsed, err := f.keeper.IsOrderNullifierUsed(f.ctx, agreementTrade().OrderNullifier)
+	require.NoError(t, err)
+	require.True(t, orderNullifierUsed)
+	logSubmitBatchProofState(t, "accepted mixed batch state", f, settlementUpdate, resp.PublicInputs)
+
 	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, "batch-1")
 	require.NoError(t, err)
 	require.Equal(t, []string{"dep-1"}, batchRecord.DepositIds)
 	require.Equal(t, []string{"wd-1"}, batchRecord.WithdrawIds)
+	require.Equal(t, []string{"trd-1"}, batchRecord.TradeIds)
+	require.Equal(t, depositsRoot, batchRecord.DepositsRoot)
+	require.Equal(t, withdrawalsRoot, batchRecord.WithdrawalsRoot)
+	require.Equal(t, nullifiersRoot, batchRecord.NullifiersRoot)
+	require.Equal(t, withdrawOutputsRoot, batchRecord.WithdrawOutputsRoot)
+	require.Equal(t, tradesRoot, batchRecord.TradesRoot)
+	require.Equal(t, ordersRoot, batchRecord.OrdersRoot)
+	require.Equal(t, "0x5452442d4d495845442d41544f4d2d555344542d62617463682d31", batchRecord.TradeBatchCommitment)
+	require.Equal(t, uint64(1), batchRecord.TradeCount)
+	logBatchRecord(t, "accepted mixed batch record", batchRecord)
+	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, newStateRootB, "1")
+}
+
+func TestMsgSubmitBatchProofRejectsReusedOrderNullifierBeforeVerify(t *testing.T) {
+	f := initFixture(t)
+	settlementUpdate, batchCommitments, proofBundle := validTradeOnlyMsgSubmitBatchProof(t, f)
+	orderNullifier := settlementUpdate.Trades[0].OrderNullifier
+	// đánh dấu đã sử dụng
+	require.NoError(t, f.keeper.SetOrderNullifierUsed(f.ctx, orderNullifier))
+
+	verifierCalls := 0
+	k := f.keeper.WithProofVerifier(types.ProofVerifierFunc(func(update []byte, proof []byte) bool {
+		verifierCalls++
+		return true
+	}))
+	msgServer := keeper.NewMsgServerImpl(k)
+
+	_, submitErr := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          sample.AccAddress(),
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      proofBundle,
+	})
+	require.Error(t, submitErr)
+	require.ErrorContains(t, submitErr, "orderNullifier")
+	require.ErrorContains(t, submitErr, "already used")
+	// Bằng 0: tức là hệ thống đã reject ngay từ vòng validate nullifier
+	// chứ không chạy xuống bước verify proof bên dưới
+	require.Zero(t, verifierCalls)
+
+	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	// StateRoot của blockchain phải giữ nguyên
+	require.Equal(t, oldStateRootC, stateRoot)
+
+	batchExists, err := f.keeper.HasBatchRecord(f.ctx, settlementUpdate.BatchId)
+	require.NoError(t, err)
+	// trường hợp false: Batch ko đc lưu lại
+	require.False(t, batchExists)
+	logSubmitBatchProofState(t, "rejected reused order-nullifier state", f, settlementUpdate, nil)
+	t.Logf("reused orderNullifier reject detail: orderNullifier=%s verifierCalls=%d err=%v", orderNullifier, verifierCalls, submitErr)
+}
+
+func TestMsgSubmitBatchProofRejectsDuplicateOrderNullifierInBatch(t *testing.T) {
+	f := initFixture(t)
+	settlementUpdate, batchCommitments, proofBundle := validTradeOnlyMsgSubmitBatchProof(t, f)
+	duplicateTrade := *settlementUpdate.Trades[0]
+	duplicateTrade.TradeId = "trd-2"
+	settlementUpdate.Trades = append(settlementUpdate.Trades, &duplicateTrade)
+
+	msgServer := keeper.NewMsgServerImpl(f.keeper.WithProofVerifier(types.StubProofVerifier{Accept: true}))
+	_, submitErr := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          sample.AccAddress(),
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      proofBundle,
+	})
+	require.Error(t, submitErr)
+	require.ErrorContains(t, submitErr, "duplicate orderNullifier")
+
+	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	require.Equal(t, oldStateRootC, stateRoot)
+	orderNullifierUsed, err := f.keeper.IsOrderNullifierUsed(f.ctx, duplicateTrade.OrderNullifier)
+	require.NoError(t, err)
+	require.False(t, orderNullifierUsed)
+	logSubmitBatchProofState(t, "rejected duplicate order-nullifier state", f, settlementUpdate, nil)
+	t.Logf("duplicate orderNullifier reject detail: tradeIds=%v orderNullifier=%s err=%v", []string{"trd-1", "trd-2"}, duplicateTrade.OrderNullifier, submitErr)
+}
+
+// khi proof bị sai
+func TestMsgSubmitBatchProofRejectsBadTradeProofWithoutMutatingState(t *testing.T) {
+	f := initFixture(t)
+	settlementUpdate, batchCommitments, proofBundle := validTradeOnlyMsgSubmitBatchProof(t, f)
+	msgServer := keeper.NewMsgServerImpl(f.keeper.WithProofVerifier(types.StubProofVerifier{Accept: false}))
+
+	_, submitErr := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          sample.AccAddress(),
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      proofBundle,
+	})
+	require.Error(t, submitErr)
+	require.ErrorContains(t, submitErr, "proof verification failed")
+
+	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	require.Equal(t, oldStateRootC, stateRoot)
+	orderNullifierUsed, err := f.keeper.IsOrderNullifierUsed(f.ctx, settlementUpdate.Trades[0].OrderNullifier)
+	require.NoError(t, err)
+	require.False(t, orderNullifierUsed)
+	batchExists, err := f.keeper.HasBatchRecord(f.ctx, settlementUpdate.BatchId)
+	require.NoError(t, err)
+	require.False(t, batchExists)
+	logSubmitBatchProofState(t, "rejected bad trade proof state", f, settlementUpdate, nil)
+	t.Logf("bad trade proof reject detail: proofBundle=%s err=%v", string(proofBundle), submitErr)
 }
 
 func TestMsgSubmitBatchProofValidationRejectsBadInputs(t *testing.T) {
@@ -462,6 +647,159 @@ func logPublicInputs(t *testing.T, title string, publicInputs []string) {
 		})
 	}
 	bz, err := json.MarshalIndent(rows, "", "  ")
+	require.NoError(t, err)
+	t.Logf("%s:\n%s", title, bz)
+}
+
+func logBatchRecord(t *testing.T, title string, batchRecord types.BatchRecord) {
+	t.Helper()
+
+	bz, err := json.MarshalIndent(batchRecord, "", "  ")
+	require.NoError(t, err)
+	t.Logf("%s:\n%s", title, bz)
+}
+
+func logOrderNullifiersUsed(t *testing.T, title string, f *fixture, trades []*types.Trade) {
+	t.Helper()
+
+	type orderNullifierLog struct {
+		TradeID        string `json:"tradeId"`
+		OrderNullifier string `json:"orderNullifier"`
+		Used           bool   `json:"used"`
+	}
+	rows := make([]orderNullifierLog, 0, len(trades))
+	for _, trade := range trades {
+		used, err := f.keeper.IsOrderNullifierUsed(f.ctx, trade.OrderNullifier)
+		require.NoError(t, err)
+		rows = append(rows, orderNullifierLog{
+			TradeID:        trade.TradeId,
+			OrderNullifier: trade.OrderNullifier,
+			Used:           used,
+		})
+	}
+	bz, err := json.MarshalIndent(rows, "", "  ")
+	require.NoError(t, err)
+	t.Logf("%s:\n%s", title, bz)
+}
+
+func requireTradeSettledEvent(t *testing.T, f *fixture, batchID, expectedTradesRoot, expectedNewStateRoot, expectedFillCount string) {
+	t.Helper()
+
+	sdkCtx := sdk.UnwrapSDKContext(f.ctx)
+	events := sdkCtx.EventManager().Events()
+	for _, event := range events {
+		if event.Type != "TradeSettled" {
+			continue
+		}
+		attrs := make(map[string]string, len(event.Attributes))
+		for _, attr := range event.Attributes {
+			attrs[attr.Key] = attr.Value
+		}
+		bz, err := json.MarshalIndent(map[string]any{
+			"type":       event.Type,
+			"attributes": attrs,
+		}, "", "  ")
+		require.NoError(t, err)
+		t.Logf("TradeSettled event observed:\n%s", bz)
+
+		if attrs["batch_id"] != batchID {
+			continue
+		}
+		require.Equal(t, batchID, attrs["batchId"])
+		require.Equal(t, expectedTradesRoot, attrs["tradesRoot"])
+		require.Equal(t, expectedTradesRoot, attrs["trades_root"])
+		require.Equal(t, expectedNewStateRoot, attrs["newStateRoot"])
+		require.Equal(t, expectedNewStateRoot, attrs["new_state_root"])
+		require.Equal(t, expectedFillCount, attrs["fillCount"])
+		require.Equal(t, expectedFillCount, attrs["fill_count"])
+		require.Equal(t, expectedFillCount, attrs["trade_count"])
+		return
+	}
+	require.Failf(t, "missing TradeSettled event", "batchID=%s tradesRoot=%s newStateRoot=%s fillCount=%s", batchID, expectedTradesRoot, expectedNewStateRoot, expectedFillCount)
+}
+
+func logSubmitBatchProofState(t *testing.T, title string, f *fixture, settlementUpdate types.SettlementUpdate, publicInputs []string) {
+	t.Helper()
+
+	type batchRecordLog struct {
+		BatchID              string   `json:"batchId"`
+		OldStateRoot         string   `json:"oldStateRoot"`
+		NewStateRoot         string   `json:"newStateRoot"`
+		DepositIds           []string `json:"depositIds"`
+		WithdrawIds          []string `json:"withdrawIds"`
+		TradeIds             []string `json:"tradeIds"`
+		DepositsRoot         string   `json:"depositsRoot"`
+		WithdrawalsRoot      string   `json:"withdrawalsRoot"`
+		NullifiersRoot       string   `json:"nullifiersRoot"`
+		WithdrawOutputsRoot  string   `json:"withdrawOutputsRoot"`
+		TradesRoot           string   `json:"tradesRoot"`
+		OrdersRoot           string   `json:"ordersRoot"`
+		TradeBatchCommitment string   `json:"tradeBatchCommitment"`
+		TradeCount           uint64   `json:"tradeCount"`
+	}
+	type orderNullifierLog struct {
+		TradeID        string `json:"tradeId"`
+		OrderNullifier string `json:"orderNullifier"`
+		Used           bool   `json:"used"`
+	}
+	type submitStateLog struct {
+		BatchID         string              `json:"batchId"`
+		CurrentRoot     string              `json:"currentRoot"`
+		ExpectedOld     string              `json:"expectedOld"`
+		ExpectedNew     string              `json:"expectedNew"`
+		BatchExists     bool                `json:"batchExists"`
+		BatchRecord     *batchRecordLog     `json:"batchRecord,omitempty"`
+		PublicInputs    []string            `json:"publicInputs,omitempty"`
+		OrderNullifiers []orderNullifierLog `json:"orderNullifiers,omitempty"`
+	}
+
+	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	batchExists, err := f.keeper.HasBatchRecord(f.ctx, settlementUpdate.BatchId)
+	require.NoError(t, err)
+	var batchRecord *batchRecordLog
+	if batchExists {
+		record, err := f.keeper.GetBatchRecord(f.ctx, settlementUpdate.BatchId)
+		require.NoError(t, err)
+		batchRecord = &batchRecordLog{
+			BatchID:              record.BatchId,
+			OldStateRoot:         record.OldStateRoot,
+			NewStateRoot:         record.NewStateRoot,
+			DepositIds:           record.DepositIds,
+			WithdrawIds:          record.WithdrawIds,
+			TradeIds:             record.TradeIds,
+			DepositsRoot:         record.DepositsRoot,
+			WithdrawalsRoot:      record.WithdrawalsRoot,
+			NullifiersRoot:       record.NullifiersRoot,
+			WithdrawOutputsRoot:  record.WithdrawOutputsRoot,
+			TradesRoot:           record.TradesRoot,
+			OrdersRoot:           record.OrdersRoot,
+			TradeBatchCommitment: record.TradeBatchCommitment,
+			TradeCount:           record.TradeCount,
+		}
+	}
+
+	orderNullifiers := make([]orderNullifierLog, 0, len(settlementUpdate.Trades))
+	for _, trade := range settlementUpdate.Trades {
+		used, err := f.keeper.IsOrderNullifierUsed(f.ctx, trade.OrderNullifier)
+		require.NoError(t, err)
+		orderNullifiers = append(orderNullifiers, orderNullifierLog{
+			TradeID:        trade.TradeId,
+			OrderNullifier: trade.OrderNullifier,
+			Used:           used,
+		})
+	}
+
+	bz, err := json.MarshalIndent(submitStateLog{
+		BatchID:         settlementUpdate.BatchId,
+		CurrentRoot:     stateRoot,
+		ExpectedOld:     settlementUpdate.OldStateRoot,
+		ExpectedNew:     settlementUpdate.NewStateRoot,
+		BatchExists:     batchExists,
+		BatchRecord:     batchRecord,
+		PublicInputs:    publicInputs,
+		OrderNullifiers: orderNullifiers,
+	}, "", "  ")
 	require.NoError(t, err)
 	t.Logf("%s:\n%s", title, bz)
 }

@@ -88,6 +88,10 @@ func (k Keeper) ExportGenesis(ctx context.Context) (*types.GenesisState, error) 
 	if err != nil {
 		return nil, err
 	}
+	batchRecords, err := k.GetAllBatchRecords(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	// For now, export empty records (can be extended later)
 	genesis.DepositRecords = nil
@@ -95,7 +99,7 @@ func (k Keeper) ExportGenesis(ctx context.Context) (*types.GenesisState, error) 
 	genesis.NullifierUsed = nil
 	genesis.OrderNullifierUsed = orderNullifiers
 	genesis.DepositProcessed = nil
-	genesis.BatchRecords = nil
+	genesis.BatchRecords = batchRecords
 
 	return genesis, nil
 }
