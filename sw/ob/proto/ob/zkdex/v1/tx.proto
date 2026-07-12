@@ -90,6 +90,25 @@ message SettlementWithdrawal {
   string nullifier = 7;
 }
 
+// Trade is the trade payload included in a settlement update.
+message Trade {
+  string trade_id = 1 [json_name = "tradeId"];
+  string market = 2;
+  string maker_order_id = 3 [json_name = "makerOrderId"];
+  string taker_order_id = 4 [json_name = "takerOrderId"];
+  string order_hash = 5 [json_name = "orderHash"];
+  string order_nullifier = 6 [json_name = "orderNullifier"];
+  string owner = 7;
+  string denom = 8;
+  string side = 9;
+  string amount = 10;
+  string price = 11;
+  string base_qty = 12 [json_name = "baseQty"];
+  string quote_qty = 13 [json_name = "quoteQty"];
+  string maker_fee = 14 [json_name = "makerFee"];
+  string taker_fee = 15 [json_name = "takerFee"];
+}
+
 // SettlementUpdate is the batch-shaped transition proposed by the relayer.
 message SettlementUpdate {
   string batch_id = 1 [json_name = "batchId"];
@@ -97,6 +116,8 @@ message SettlementUpdate {
   string new_state_root = 3 [json_name = "newStateRoot"];
   repeated SettlementDeposit deposits = 4;
   repeated SettlementWithdrawal withdrawals = 5;
+  repeated Trade trades = 6;
+  bytes trade_batch_commitment = 7 [json_name = "tradeBatchCommitment"];
 }
 
 // BatchCommitments binds the settlement arrays to ordered verifier public inputs.
@@ -105,6 +126,8 @@ message BatchCommitments {
   string withdrawals_root = 2 [json_name = "withdrawalsRoot"];
   string nullifiers_root = 3 [json_name = "nullifiersRoot"];
   string withdraw_outputs_root = 4 [json_name = "withdrawOutputsRoot"];
+  string trades_root = 5 [json_name = "tradesRoot"];
+  string orders_root = 6 [json_name = "ordersRoot"];
 }
 
 // MsgSubmitBatchProof is the Msg/SubmitBatchProof request type.

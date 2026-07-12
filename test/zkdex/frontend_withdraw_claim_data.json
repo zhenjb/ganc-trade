@@ -1,0 +1,93 @@
+{
+  "schema": "zkdex.frontend.claim-withdraw.v1",
+  "generatedAt": "2026-06-27T03:37:30Z",
+  "purpose": "Frontend uses this after withdrawal flow step 7 has accepted MsgSubmitBatchProof and created a claimable WithdrawRecord.",
+  "chain": {
+    "chainId": "ob",
+    "node": "tcp://localhost:26657",
+    "binary": "obd"
+  },
+  "signer": {
+    "keyName": "alice",
+    "address": "cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef"
+  },
+  "claimWithdraw": {
+    "withdrawId": "wd-onchain11-1782531436",
+    "creator": "cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef",
+    "tx": {
+      "typeUrl": "/ob.zkdex.v1.MsgClaimWithdraw",
+      "value": {
+        "creator": "cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef",
+        "withdrawId": "wd-onchain11-1782531436"
+      },
+      "cli": "obd tx zkdex claim-withdraw wd-onchain11-1782531436 --from alice --chain-id ob --keyring-backend test --node tcp://localhost:26657 --gas auto --gas-adjustment 1.3 --fees 0USDT -y -o json"
+    },
+    "preflightQueries": {
+      "withdrawRecord": {
+        "cli": "obd q zkdex withdraw-record wd-onchain11-1782531436 --node tcp://localhost:26657 -o json",
+        "restPath": "/ob/zkdex/v1/withdraw_record/wd-onchain11-1782531436",
+        "expected": {
+          "record": {
+            "withdraw_id": "wd-onchain11-1782531436",
+            "owner": "cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef",
+            "denom": "USDT",
+            "amount": "40",
+            "destination": "cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef",
+            "nullifier": "0xmocknullifierONCHAIN111782531436",
+            "claimed": false
+          }
+        },
+        "actual": {
+          "record": {
+            "withdraw_id": "wd-onchain11-1782531436",
+            "owner": "cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef",
+            "denom": "USDT",
+            "amount": "40",
+            "destination": "cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef",
+            "nullifier": "0xmocknullifierONCHAIN111782531436",
+            "claimed": false
+          }
+        }
+      },
+      "moduleAccountBalance": {
+        "cli": "obd q zkdex module-account-balance USDT --node tcp://localhost:26657 -o json",
+        "restPath": "/ob/zkdex/v1/module_account_balance",
+        "beforeClaim": "200USDT"
+      }
+    },
+    "expectedAfterSuccess": {
+      "eventType": "zkdex_withdraw_claimed",
+      "eventAttributes": {
+        "withdraw_id": "wd-onchain11-1782531436",
+        "creator": "cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef",
+        "denom": "USDT",
+        "amount": "40"
+      },
+      "withdrawRecord": {
+        "claimed": true
+      },
+      "userBankBalanceDelta": {
+        "denom": "USDT",
+        "amount": "40"
+      }
+    }
+  },
+  "sourceStep7": {
+    "submitBatchProofTxHash": "FDAB136A4C42AA666C3E29AA0E2709D6A4EE0148877DED79214AFC24A039D396",
+    "settlementSummary": {
+      "batchId": "batch-onchain11-1782531436",
+      "oldStateRoot": "0xrootONCHAIN111782531156",
+      "newStateRoot": "0xrootONCHAIN111782531436",
+      "depositId": "dep-cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef-352-74fc0a9c",
+      "depositAmount": "100",
+      "withdrawId": "wd-onchain11-1782531436",
+      "withdrawAmount": "40",
+      "nullifier": "0xmocknullifierONCHAIN111782531436"
+    }
+  },
+  "balancesBeforeClaim": {
+    "module": "200USDT",
+    "userAmount": "99999800",
+    "denom": "USDT"
+  }
+}

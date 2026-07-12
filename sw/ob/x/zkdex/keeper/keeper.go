@@ -22,14 +22,15 @@ type Keeper struct {
 	addressCodec address.Codec
 	authority    []byte
 
-	Schema           collections.Schema
-	Params           collections.Item[types.Params]
-	StateRoot        collections.Item[string]
-	DepositRecords   collections.Map[string, types.DepositRecord]
-	WithdrawRecords  collections.Map[string, types.WithdrawRecord]
-	NullifierUsed    collections.Map[string, bool]
-	DepositProcessed collections.Map[string, bool]
-	BatchRecords     collections.Map[string, types.BatchRecord]
+	Schema             collections.Schema
+	Params             collections.Item[types.Params]
+	StateRoot          collections.Item[string]
+	DepositRecords     collections.Map[string, types.DepositRecord]
+	WithdrawRecords    collections.Map[string, types.WithdrawRecord]
+	NullifierUsed      collections.Map[string, bool]
+	OrderNullifierUsed collections.Map[string, bool]
+	DepositProcessed   collections.Map[string, bool]
+	BatchRecords       collections.Map[string, types.BatchRecord]
 
 	bankKeeper types.BankKeeper
 	authKeeper types.AuthKeeper
@@ -63,16 +64,17 @@ func NewKeeper(
 		addressCodec: addressCodec,
 		authority:    authority,
 
-		bankKeeper:       bankKeeper,
-		authKeeper:       authKeeper,
-		verifier:         verifier,
-		Params:           collections.NewItem(sb, types.ParamsKey, "params", codec.CollValue[types.Params](cdc)),
-		StateRoot:        collections.NewItem(sb, types.StateRootKey, "state_root", collections.StringValue),
-		DepositRecords:   collections.NewMap(sb, types.DepositRecordKey, "deposit_records", collections.StringKey, codec.CollValue[types.DepositRecord](cdc)),
-		WithdrawRecords:  collections.NewMap(sb, types.WithdrawRecordKey, "withdraw_records", collections.StringKey, codec.CollValue[types.WithdrawRecord](cdc)),
-		NullifierUsed:    collections.NewMap(sb, types.NullifierUsedKey, "nullifier_used", collections.StringKey, collections.BoolValue),
-		DepositProcessed: collections.NewMap(sb, types.DepositProcessedKey, "deposit_processed", collections.StringKey, collections.BoolValue),
-		BatchRecords:     collections.NewMap(sb, types.BatchRecordKey, "batch_records", collections.StringKey, codec.CollValue[types.BatchRecord](cdc)),
+		bankKeeper:         bankKeeper,
+		authKeeper:         authKeeper,
+		verifier:           verifier,
+		Params:             collections.NewItem(sb, types.ParamsKey, "params", codec.CollValue[types.Params](cdc)),
+		StateRoot:          collections.NewItem(sb, types.StateRootKey, "state_root", collections.StringValue),
+		DepositRecords:     collections.NewMap(sb, types.DepositRecordKey, "deposit_records", collections.StringKey, codec.CollValue[types.DepositRecord](cdc)),
+		WithdrawRecords:    collections.NewMap(sb, types.WithdrawRecordKey, "withdraw_records", collections.StringKey, codec.CollValue[types.WithdrawRecord](cdc)),
+		NullifierUsed:      collections.NewMap(sb, types.NullifierUsedKey, "nullifier_used", collections.StringKey, collections.BoolValue),
+		OrderNullifierUsed: collections.NewMap(sb, types.OrderNullifierUsedMapKey, "order_nullifier_used", collections.StringKey, collections.BoolValue),
+		DepositProcessed:   collections.NewMap(sb, types.DepositProcessedKey, "deposit_processed", collections.StringKey, collections.BoolValue),
+		BatchRecords:       collections.NewMap(sb, types.BatchRecordKey, "batch_records", collections.StringKey, codec.CollValue[types.BatchRecord](cdc)),
 	}
 
 	schema, err := sb.Build()
@@ -141,7 +143,7 @@ func (k Keeper) GetStateRoot(ctx context.Context) (string, error) {
 	root, err := k.StateRoot.Get(ctx)
 	if err != nil {
 		// If not found, return default
-		return "0xrootA", nil
+		return types.DefaultStateRoot, nil
 	}
 	return root, nil
 }
@@ -228,4 +230,16 @@ func (k Keeper) GetBatchRecord(ctx context.Context, batchId string) (types.Batch
 
 func (k Keeper) HasBatchRecord(ctx context.Context, batchId string) (bool, error) {
 	return k.BatchRecords.Has(ctx, batchId)
+}
+
+func (k Keeper) GetAllBatchRecords(ctx context.Context) ([]*types.BatchRecord, error) {
+	records := make([]*types.BatchRecord, 0)
+	if err := k.BatchRecords.Walk(ctx, nil, func(_ string, record types.BatchRecord) (bool, error) {
+		recordCopy := record
+		records = append(records, &recordCopy)
+		return false, nil
+	}); err != nil {
+		return nil, err
+	}
+	return records, nil
 }

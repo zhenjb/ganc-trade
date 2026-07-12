@@ -108,6 +108,21 @@ func (q queryServer) NullifierUsed(ctx context.Context, req *types.QueryNullifie
 	return &types.QueryNullifierUsedResponse{Used: used}, nil
 }
 
+func (q queryServer) OrderNullifierUsed(ctx context.Context, req *types.QueryOrderNullifierUsedRequest) (*types.QueryOrderNullifierUsedResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+	if req.OrderNullifier == "" {
+		return nil, status.Error(codes.InvalidArgument, "order nullifier cannot be empty")
+	}
+
+	used, err := q.k.IsOrderNullifierUsed(ctx, req.OrderNullifier)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	return &types.QueryOrderNullifierUsedResponse{Used: used}, nil
+}
+
 func (q queryServer) DepositProcessed(ctx context.Context, req *types.QueryDepositProcessedRequest) (*types.QueryDepositProcessedResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
@@ -126,6 +141,9 @@ func (q queryServer) DepositProcessed(ctx context.Context, req *types.QueryDepos
 func (q queryServer) BatchRecord(ctx context.Context, req *types.QueryBatchRecordRequest) (*types.QueryBatchRecordResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
+	}
+	if req.BatchId == "" {
+		return nil, status.Error(codes.InvalidArgument, "batch id cannot be empty")
 	}
 
 	record, err := q.k.GetBatchRecord(ctx, req.BatchId)

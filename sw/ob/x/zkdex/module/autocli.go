@@ -58,6 +58,12 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "nullifier"}},
 				},
 				{
+					RpcMethod:      "OrderNullifierUsed",
+					Use:            "order-nullifier-used [order-nullifier]",
+					Short:          "Shows whether a zkdex order nullifier has been used",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "order_nullifier"}},
+				},
+				{
 					RpcMethod:      "BatchRecord",
 					Use:            "batch-record [batch-id]",
 					Short:          "Shows a zkdex batch record",

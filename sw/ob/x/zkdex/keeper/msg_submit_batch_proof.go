@@ -2,8 +2,11 @@ package keeper
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"reflect"
+	"strconv"
+	"strings"
 
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -23,11 +26,13 @@ type msgSubmitBatchProofVerifierInput struct {
 }
 
 type agreementSettlementUpdate struct {
-	BatchID      string                          `json:"batchId"`
-	OldStateRoot string                          `json:"oldStateRoot"`
-	NewStateRoot string                          `json:"newStateRoot"`
-	Deposits     []agreementSettlementDeposit    `json:"deposits"`
-	Withdrawals  []agreementSettlementWithdrawal `json:"withdrawals"`
+	BatchID              string                          `json:"batchId"`
+	OldStateRoot         string                          `json:"oldStateRoot"`
+	NewStateRoot         string                          `json:"newStateRoot"`
+	Deposits             []agreementSettlementDeposit    `json:"deposits"`
+	Withdrawals          []agreementSettlementWithdrawal `json:"withdrawals"`
+	Trades               []agreementTrade                `json:"trades"`
+	TradeBatchCommitment string                          `json:"tradeBatchCommitment"`
 }
 
 type agreementSettlementDeposit struct {
@@ -47,12 +52,34 @@ type agreementSettlementWithdrawal struct {
 	Nullifier       string `json:"nullifier"`
 }
 
+type agreementTrade struct {
+	TradeID        string `json:"tradeId"`
+	Market         string `json:"market"`
+	MakerOrderID   string `json:"makerOrderId"`
+	TakerOrderID   string `json:"takerOrderId"`
+	OrderHash      string `json:"orderHash"`
+	OrderNullifier string `json:"orderNullifier"`
+	Owner          string `json:"owner"`
+	Denom          string `json:"denom"`
+	Side           string `json:"side"`
+	Amount         string `json:"amount"`
+	Price          string `json:"price"`
+	BaseQty        string `json:"baseQty"`
+	QuoteQty       string `json:"quoteQty"`
+	MakerFee       string `json:"makerFee"`
+	TakerFee       string `json:"takerFee"`
+}
+
 type agreementBatchCommitments struct {
 	DepositsRoot        string `json:"depositsRoot"`
 	WithdrawalsRoot     string `json:"withdrawalsRoot"`
 	NullifiersRoot      string `json:"nullifiersRoot"`
 	WithdrawOutputsRoot string `json:"withdrawOutputsRoot"`
+	TradesRoot          string `json:"tradesRoot"`
+	OrdersRoot          string `json:"ordersRoot"`
 }
+
+const emptyPublicInputRootSentinel = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
 // verify proof
 func (k msgServer) SubmitBatchProof(ctx context.Context, req *types.MsgSubmitBatchProof) (*types.MsgSubmitBatchProofResponse, error) {
@@ -83,7 +110,7 @@ func (k msgServer) SubmitBatchProof(ctx context.Context, req *types.MsgSubmitBat
 	if !k.Keeper.VerifyProof(verifierInput, req.ProofBundle) {
 		return nil, errorsmod.Wrap(sdkerrors.ErrUnauthorized, "proof verification failed")
 	}
-	if err := k.applySettlementUpdate(ctx, settlementUpdate); err != nil {
+	if err := k.applySettlementUpdate(ctx, settlementUpdate, publicInputs); err != nil {
 		return nil, err
 	}
 
@@ -120,14 +147,39 @@ func (k msgServer) validateSettlementUpdate(ctx context.Context, settlementUpdat
 		return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "oldStateRoot mismatch: got %s, current %s", settlementUpdate.OldStateRoot, currentRoot)
 	}
 
-	if len(settlementUpdate.Deposits) == 0 && len(settlementUpdate.Withdrawals) == 0 {
-		return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "settlement update must include at least one deposit or withdrawal")
+	if len(settlementUpdate.Deposits) == 0 && len(settlementUpdate.Withdrawals) == 0 && len(settlementUpdate.Trades) == 0 {
+		return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "settlement update must include at least one deposit, withdrawal, or trade")
 	}
 	if err := k.validateSettlementDeposits(ctx, settlementUpdate.Deposits); err != nil {
 		return nil, err
 	}
 	if err := k.validateSettlementWithdrawals(ctx, settlementUpdate.Withdrawals); err != nil {
 		return nil, err
+	}
+	if err := k.validateSettlementTrades(ctx, settlementUpdate.Trades, settlementUpdate.TradeBatchCommitment); err != nil {
+		return nil, err
+	}
+
+	publicInputs, err := derivePublicInputs(settlementUpdate, batchCommitments)
+	if err != nil {
+		return nil, err
+	}
+
+	return publicInputs, nil
+}
+
+func derivePublicInputs(settlementUpdate types.SettlementUpdate, batchCommitments types.BatchCommitments) ([]string, error) {
+	tradesRoot := batchCommitments.TradesRoot
+	ordersRoot := batchCommitments.OrdersRoot
+	if len(settlementUpdate.Trades) == 0 {
+		if tradesRoot != "" && tradesRoot != emptyPublicInputRootSentinel {
+			return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "tradesRoot must be empty-root sentinel when no trades are present")
+		}
+		if ordersRoot != "" && ordersRoot != emptyPublicInputRootSentinel {
+			return nil, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "ordersRoot must be empty-root sentinel when no trades are present")
+		}
+		tradesRoot = emptyPublicInputRootSentinel
+		ordersRoot = emptyPublicInputRootSentinel
 	}
 
 	publicInputs := []string{
@@ -137,14 +189,66 @@ func (k msgServer) validateSettlementUpdate(ctx context.Context, settlementUpdat
 		batchCommitments.WithdrawalsRoot,
 		batchCommitments.NullifiersRoot,
 		batchCommitments.WithdrawOutputsRoot,
+		tradesRoot,
+		ordersRoot,
 	}
 	for i, input := range publicInputs {
-		if input == "" {
-			return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "public input %d cannot be empty", i)
+		if err := validatePublicInputField(i, input); err != nil {
+			return nil, err
 		}
 	}
 
 	return publicInputs, nil
+}
+
+func validatePublicInputField(index int, input string) error {
+	if input == "" {
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "public input %d cannot be empty", index)
+	}
+	raw := strings.TrimPrefix(input, "0x")
+	if len(raw) != 64 {
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "public input %d must be 32-byte hex", index)
+	}
+	if _, err := hex.DecodeString(raw); err != nil {
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "public input %d must be hex encoded", index)
+	}
+	return nil
+}
+
+func (k msgServer) validateSettlementTrades(ctx context.Context, trades []*types.Trade, tradeBatchCommitment []byte) error {
+	if len(trades) == 0 {
+		return nil
+	}
+	if len(tradeBatchCommitment) == 0 {
+		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "tradeBatchCommitment cannot be empty when trades are present")
+	}
+	seenTrades := make(map[string]struct{}, len(trades))
+	seenNullifiers := make(map[string]struct{}, len(trades))
+	for _, trade := range trades {
+		if err := trade.ValidateBasic(); err != nil {
+			return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+		}
+		normalizedNullifier, err := types.NormalizeOrderNullifier(trade.OrderNullifier)
+		if err != nil {
+			return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+		}
+		if _, ok := seenTrades[trade.TradeId]; ok {
+			return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "duplicate tradeId %s", trade.TradeId)
+		}
+		if _, ok := seenNullifiers[normalizedNullifier]; ok {
+			return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "duplicate orderNullifier %s", trade.OrderNullifier)
+		}
+		used, err := k.Keeper.IsOrderNullifierUsed(ctx, trade.OrderNullifier)
+		if err != nil {
+			return errorsmod.Wrapf(err, "failed to read orderNullifier %s", trade.OrderNullifier)
+		}
+		if used {
+			return errorsmod.Wrapf(types.ErrOrderNullifierReused, "orderNullifier %s already used", trade.OrderNullifier)
+		}
+		seenTrades[trade.TradeId] = struct{}{}
+		seenNullifiers[normalizedNullifier] = struct{}{}
+	}
+	return nil
 }
 
 // check unprocessed deposit
@@ -228,10 +332,11 @@ func (k msgServer) validateSettlementWithdrawals(ctx context.Context, withdrawal
 	return nil
 }
 
-func (k msgServer) applySettlementUpdate(ctx context.Context, settlementUpdate types.SettlementUpdate) error {
+func (k msgServer) applySettlementUpdate(ctx context.Context, settlementUpdate types.SettlementUpdate, publicInputs []string) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	depositIds := make([]string, 0, len(settlementUpdate.Deposits))
 	withdrawIds := make([]string, 0, len(settlementUpdate.Withdrawals))
+	tradeIds := make([]string, 0, len(settlementUpdate.Trades))
 
 	if err := k.Keeper.SetStateRoot(ctx, settlementUpdate.NewStateRoot); err != nil {
 		return errorsmod.Wrap(err, "failed to set new state root")
@@ -260,14 +365,29 @@ func (k msgServer) applySettlementUpdate(ctx context.Context, settlementUpdate t
 		}
 		withdrawIds = append(withdrawIds, withdrawal.WithdrawId)
 	}
+	for _, trade := range settlementUpdate.Trades {
+		if err := k.Keeper.SetOrderNullifierUsed(ctx, trade.OrderNullifier); err != nil {
+			return errorsmod.Wrapf(err, "failed to mark orderNullifier %s used", trade.OrderNullifier)
+		}
+		tradeIds = append(tradeIds, trade.TradeId)
+	}
 
 	batchRecord := types.BatchRecord{
-		BatchId:       settlementUpdate.BatchId,
-		OldStateRoot:  settlementUpdate.OldStateRoot,
-		NewStateRoot:  settlementUpdate.NewStateRoot,
-		DepositIds:    depositIds,
-		WithdrawIds:   withdrawIds,
-		CreatedHeight: sdkCtx.BlockHeight(),
+		BatchId:              settlementUpdate.BatchId,
+		OldStateRoot:         settlementUpdate.OldStateRoot,
+		NewStateRoot:         settlementUpdate.NewStateRoot,
+		DepositIds:           depositIds,
+		WithdrawIds:          withdrawIds,
+		CreatedHeight:        sdkCtx.BlockHeight(),
+		TradeIds:             tradeIds,
+		DepositsRoot:         publicInputs[2],
+		WithdrawalsRoot:      publicInputs[3],
+		NullifiersRoot:       publicInputs[4],
+		WithdrawOutputsRoot:  publicInputs[5],
+		TradesRoot:           publicInputs[6],
+		OrdersRoot:           publicInputs[7],
+		TradeBatchCommitment: bytesToHexString(settlementUpdate.TradeBatchCommitment),
+		TradeCount:           uint64(len(settlementUpdate.Trades)),
 	}
 	if err := k.Keeper.SetBatchRecord(ctx, settlementUpdate.BatchId, batchRecord); err != nil {
 		return errorsmod.Wrapf(err, "failed to store batch record %s", settlementUpdate.BatchId)
@@ -279,6 +399,20 @@ func (k msgServer) applySettlementUpdate(ctx context.Context, settlementUpdate t
 		sdk.NewAttribute("old_state_root", settlementUpdate.OldStateRoot),
 		sdk.NewAttribute("new_state_root", settlementUpdate.NewStateRoot),
 	))
+	if len(settlementUpdate.Trades) > 0 {
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"TradeSettled",
+			sdk.NewAttribute("batchId", settlementUpdate.BatchId),
+			sdk.NewAttribute("batch_id", settlementUpdate.BatchId),
+			sdk.NewAttribute("tradesRoot", publicInputs[6]),
+			sdk.NewAttribute("trades_root", publicInputs[6]),
+			sdk.NewAttribute("newStateRoot", settlementUpdate.NewStateRoot),
+			sdk.NewAttribute("new_state_root", settlementUpdate.NewStateRoot),
+			sdk.NewAttribute("fillCount", strconv.Itoa(len(settlementUpdate.Trades))),
+			sdk.NewAttribute("fill_count", strconv.Itoa(len(settlementUpdate.Trades))),
+			sdk.NewAttribute("trade_count", strconv.Itoa(len(settlementUpdate.Trades))),
+		))
+	}
 	return nil
 }
 
@@ -300,17 +434,21 @@ func validateProofBundlePublicInputs(proofBundle []byte, publicInputs []string) 
 func buildMsgSubmitBatchProofVerifierInput(settlementUpdate types.SettlementUpdate, batchCommitments types.BatchCommitments, publicInputs []string) ([]byte, error) {
 	payload := msgSubmitBatchProofVerifierInput{
 		SettlementUpdate: agreementSettlementUpdate{
-			BatchID:      settlementUpdate.BatchId,
-			OldStateRoot: settlementUpdate.OldStateRoot,
-			NewStateRoot: settlementUpdate.NewStateRoot,
-			Deposits:     make([]agreementSettlementDeposit, 0, len(settlementUpdate.Deposits)),
-			Withdrawals:  make([]agreementSettlementWithdrawal, 0, len(settlementUpdate.Withdrawals)),
+			BatchID:              settlementUpdate.BatchId,
+			OldStateRoot:         settlementUpdate.OldStateRoot,
+			NewStateRoot:         settlementUpdate.NewStateRoot,
+			Deposits:             make([]agreementSettlementDeposit, 0, len(settlementUpdate.Deposits)),
+			Withdrawals:          make([]agreementSettlementWithdrawal, 0, len(settlementUpdate.Withdrawals)),
+			Trades:               make([]agreementTrade, 0, len(settlementUpdate.Trades)),
+			TradeBatchCommitment: bytesToHexString(settlementUpdate.TradeBatchCommitment),
 		},
 		BatchCommitments: agreementBatchCommitments{
 			DepositsRoot:        batchCommitments.DepositsRoot,
 			WithdrawalsRoot:     batchCommitments.WithdrawalsRoot,
 			NullifiersRoot:      batchCommitments.NullifiersRoot,
 			WithdrawOutputsRoot: batchCommitments.WithdrawOutputsRoot,
+			TradesRoot:          publicInputs[6],
+			OrdersRoot:          publicInputs[7],
 		},
 		PublicInputs: publicInputs,
 	}
@@ -334,6 +472,32 @@ func buildMsgSubmitBatchProofVerifierInput(settlementUpdate types.SettlementUpda
 			Nullifier:       withdrawal.Nullifier,
 		})
 	}
+	for _, trade := range settlementUpdate.Trades {
+		payload.SettlementUpdate.Trades = append(payload.SettlementUpdate.Trades, agreementTrade{
+			TradeID:        trade.TradeId,
+			Market:         trade.Market,
+			MakerOrderID:   trade.MakerOrderId,
+			TakerOrderID:   trade.TakerOrderId,
+			OrderHash:      trade.OrderHash,
+			OrderNullifier: trade.OrderNullifier,
+			Owner:          trade.Owner,
+			Denom:          trade.Denom,
+			Side:           trade.Side,
+			Amount:         trade.Amount,
+			Price:          trade.Price,
+			BaseQty:        trade.BaseQty,
+			QuoteQty:       trade.QuoteQty,
+			MakerFee:       trade.MakerFee,
+			TakerFee:       trade.TakerFee,
+		})
+	}
 
 	return json.Marshal(payload)
+}
+
+func bytesToHexString(bz []byte) string {
+	if len(bz) == 0 {
+		return ""
+	}
+	return "0x" + hex.EncodeToString(bz)
 }

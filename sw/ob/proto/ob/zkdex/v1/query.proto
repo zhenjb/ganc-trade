@@ -40,6 +40,10 @@ service Query {
   rpc NullifierUsed(QueryNullifierUsedRequest) returns (QueryNullifierUsedResponse) {
     option (google.api.http).get = "/ob/zkdex/v1/nullifier_used/{nullifier}";
   }
+  // OrderNullifierUsed queries if an order nullifier is used.
+  rpc OrderNullifierUsed(QueryOrderNullifierUsedRequest) returns (QueryOrderNullifierUsedResponse) {
+    option (google.api.http).get = "/ob/zkdex/v1/order_nullifier_used/{order_nullifier}";
+  }
   // DepositProcessed queries if a deposit is processed.
   rpc DepositProcessed(QueryDepositProcessedRequest) returns (QueryDepositProcessedResponse) {
     option (google.api.http).get = "/ob/zkdex/v1/deposit_processed/{deposit_id}";
@@ -104,6 +108,14 @@ message QueryNullifierUsedRequest {
 }
 
 message QueryNullifierUsedResponse {
+  bool used = 1;
+}
+
+message QueryOrderNullifierUsedRequest {
+  string order_nullifier = 1;
+}
+
+message QueryOrderNullifierUsedResponse {
   bool used = 1;
 }
 
