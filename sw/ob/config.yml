@@ -1,27 +1,30 @@
 version: 1
 validation: sovereign
-default_denom: USDT
+default_denom: uusdc
 accounts: 
 - name: alice
   coins:
-  - 20000ATOM
-  - 200000000USDT
+  - 20000000000uatom
+  - 20000000000uosmo
+  - 200000000000uusdc
 - name: bob
   coins:
-  - 10000ATOM
-  - 100000000USDT
+  - 10000000000uatom
+  - 10000000000uosmo
+  - 100000000000uusdc
 client:
   openapi:
     path: docs/static/openapi.json
 faucet:
   name: bob
   coins:
-  - 5ATOM
-  - 100000USDT
+  - 5000000uatom
+  - 5000000uosmo
+  - 100000000uusdc
 validators:
 - name: alice
-  bonded: 100000000USDT
+  bonded: 100000000uusdc
 - name: validator1
-  bonded: 200000000USDT
+  bonded: 200000000uusdc
 - name: validator2
-  bonded: 100000000USDT
+  bonded: 100000000uusdc

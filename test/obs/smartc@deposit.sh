@@ -4,8 +4,9 @@ set -euo pipefail
 
 # Declare basic variables
 CHAIN_ID="ob"
-DENOM="ATOM"
-AMOUNT="1000$DENOM"
+DENOM="uatom"
+AMOUNT_VALUE="1000"
+AMOUNT="${AMOUNT_VALUE}${DENOM}"
 USER_NAME="alice"
 
 B='\033[0;34m'
@@ -42,13 +43,28 @@ echo -e "${B}[BALANCE]      SmartC Wallet: $BALANCE_SC${NC}"
 
 
 # Transaction
-echo -e "${Y}[SYS]          Send 1000 $DENOM from Alice to the Module....${NC}}"
-echo -e "${G}[SYS]          Call 'obd tx backend deposit .. --from .. --chain-id .. --keyring-backend test -y'${NC}"
-HANDLE_TRANSACTION=$(obd tx backend deposit $AMOUNT --from $USER_NAME --chain-id $CHAIN_ID --keyring-backend test -y | awk '/txhash:/ {print $2}')
+echo -e "${Y}[SYS]          Send $AMOUNT from Alice to the Module....${NC}"
+echo -e "${G}[SYS]          Call 'obd tx backend deposit .. --from .. --chain-id .. --keyring-backend test -y -o json'${NC}"
+TX_RESULT=$(obd tx backend deposit $AMOUNT --from $USER_NAME --chain-id $CHAIN_ID --keyring-backend test -y -o json)
+TX_CODE=$(echo "$TX_RESULT" | jq -r '.code // 0')
+if [[ "$TX_CODE" != "0" ]]; then
+  echo -e "${R}[ERR]          Deposit rejected during broadcast: code=$TX_CODE${NC}" >&2
+  echo "$TX_RESULT" | jq . >&2
+  exit 1
+fi
+HANDLE_TRANSACTION=$(echo "$TX_RESULT" | jq -r '.txhash')
 echo -e "${B}[FIN]          Deposit Tx: ${Y}$HANDLE_TRANSACTION${NC}"
 echo -e "${G}[SYS]          In progress ...${NC}"
 echo -e "${B}[TRANS]        Waiting  ...${NC}"
 sleep 5
+
+TX_QUERY=$(obd q tx "$HANDLE_TRANSACTION" -o json)
+DELIVER_CODE=$(echo "$TX_QUERY" | jq -r '.code // 0')
+if [[ "$DELIVER_CODE" != "0" ]]; then
+  echo -e "${R}[ERR]          Deposit rejected on-chain: code=$DELIVER_CODE${NC}" >&2
+  echo "$TX_QUERY" | jq . >&2
+  exit 1
+fi
 
 
 # Balance
