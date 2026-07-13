@@ -30,7 +30,7 @@ func TestWithdrawRecordClaimedFalseAppearsInAminoJSON(t *testing.T) {
 	record := dynamicpb.NewMessage(withdrawMsgDesc)
 	record.Set(withdrawMsgDesc.Fields().ByName("withdraw_id"), protoreflect.ValueOfString("wd-1"))
 	record.Set(withdrawMsgDesc.Fields().ByName("owner"), protoreflect.ValueOfString("cosmos1test"))
-	record.Set(withdrawMsgDesc.Fields().ByName("denom"), protoreflect.ValueOfString("USDT"))
+	record.Set(withdrawMsgDesc.Fields().ByName("denom"), protoreflect.ValueOfString("uusdc"))
 	record.Set(withdrawMsgDesc.Fields().ByName("amount"), protoreflect.ValueOfString("40"))
 	record.Set(withdrawMsgDesc.Fields().ByName("destination"), protoreflect.ValueOfString("cosmos1test"))
 	record.Set(withdrawMsgDesc.Fields().ByName("nullifier"), protoreflect.ValueOfString("0xnull"))

@@ -1,1 +1,1 @@
-obd tx dex register-pairs ATOM USDT 0.01 1 --from alice --chain-id ob -y
+obd tx dex register-pairs uatom uusdc 0.01 1 --from alice --chain-id ob -y

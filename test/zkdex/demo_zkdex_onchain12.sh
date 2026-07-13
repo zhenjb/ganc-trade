@@ -14,13 +14,21 @@ NC='\033[0m'
 SIGNER="${SIGNER:-alice}"
 CHAIN_ID="${CHAIN_ID:-ob}"
 NODE="${NODE:-tcp://localhost:26657}"
-ASSET_DENOM="${ASSET_DENOM:-USDT}"
+ASSET_DENOM="${ASSET_DENOM:-uusdc}"
 DEPOSIT_AMOUNT="${DEPOSIT_AMOUNT:-100}"
 WITHDRAW_AMOUNT="${WITHDRAW_AMOUNT:-40}"
-TX_FEE="${TX_FEE:-0USDT}"
+TX_FEE="${TX_FEE:-0uusdc}"
 BINARY="${BINARY:-obd}"
 
 RUN_ID="$(date +%s)"
+make_root() {
+    printf '0x%064x' "$1"
+}
+DEPOSITS_ROOT="0x1111111111111111111111111111111111111111111111111111111111111111"
+WITHDRAWALS_ROOT="0x2222222222222222222222222222222222222222222222222222222222222222"
+NULLIFIERS_ROOT="0x3333333333333333333333333333333333333333333333333333333333333333"
+WITHDRAW_OUTPUTS_ROOT="0x4444444444444444444444444444444444444444444444444444444444444444"
+EMPTY_ROOT="0x0000000000000000000000000000000000000000000000000000000000000000"
 BATCH_ID_BAD_PROOF="batch-onchain12-badproof-${RUN_ID}"
 BATCH_ID_VALID="batch-onchain12-valid-${RUN_ID}"
 BATCH_ID_DUP_NULLIFIER="batch-onchain12-dupnull-${RUN_ID}"
@@ -29,9 +37,10 @@ WITHDRAW_ID_VALID="wd-onchain12-valid-${RUN_ID}"
 WITHDRAW_ID_DUP_NULLIFIER="wd-onchain12-dupnull-${RUN_ID}"
 NULLIFIER="0xmocknullifierONCHAIN12${RUN_ID}"
 DESTINATION_HASH="0xmockdestinationhashONCHAIN12${RUN_ID}"
-ROOT_BAD_PROOF="0xrootONCHAIN12BADPROOF${RUN_ID}"
-ROOT_VALID="0xrootONCHAIN12VALID${RUN_ID}"
-ROOT_DUP_NULLIFIER="0xrootONCHAIN12DUPNULL${RUN_ID}"
+ROOT_BAD_PROOF="$(make_root $((RUN_ID + 1201)))"
+ROOT_TAMPERED_PROOF="$(make_root $((RUN_ID + 1202)))"
+ROOT_VALID="$(make_root $((RUN_ID + 1203)))"
+ROOT_DUP_NULLIFIER="$(make_root $((RUN_ID + 1204)))"
 PROOF_BAD_FILE="proof_bundle_onchain12_bad_${RUN_ID}.json"
 PROOF_VALID_FILE="proof_bundle_onchain12_valid_${RUN_ID}.json"
 PROOF_DUP_FILE="proof_bundle_onchain12_dup_${RUN_ID}.json"
@@ -237,7 +246,9 @@ write_proof_bundle() {
     "${deposits_root}",
     "${withdrawals_root}",
     "${nullifiers_root}",
-    "${withdraw_outputs_root}"
+    "${withdraw_outputs_root}",
+    "${EMPTY_ROOT}",
+    "${EMPTY_ROOT}"
   ],
   "verificationKeyId": "v1"
 }
@@ -308,7 +319,7 @@ create_deposit() {
     printf '%s' "$deposit_id"
 }
 
-BATCH_COMMITMENTS='{"depositsRoot":"0xdepositsRoot","withdrawalsRoot":"0xwithdrawalsRoot","nullifiersRoot":"0xnullifiersRoot","withdrawOutputsRoot":"0xwithdrawOutputsRoot"}'
+BATCH_COMMITMENTS="{\"depositsRoot\":\"${DEPOSITS_ROOT}\",\"withdrawalsRoot\":\"${WITHDRAWALS_ROOT}\",\"nullifiersRoot\":\"${NULLIFIERS_ROOT}\",\"withdrawOutputsRoot\":\"${WITHDRAW_OUTPUTS_ROOT}\",\"tradesRoot\":\"${EMPTY_ROOT}\",\"ordersRoot\":\"${EMPTY_ROOT}\"}"
 
 echo -e "${CYAN}======================================================================${NC}"
 echo -e "${CYAN}  KỊCH BẢN DEMO MVP ZKDEX - TASK ONCHAIN-12 FAILURE TESTS             ${NC}"
@@ -339,7 +350,7 @@ if ! DEPOSIT_BAD_PROOF_ID=$(create_deposit "Bad-proof"); then
     exit 1
 fi
 SETTLEMENT_BAD_PROOF=$(make_settlement_update "$BATCH_ID_BAD_PROOF" "$OLD_STATE_ROOT" "$ROOT_BAD_PROOF" "$DEPOSIT_BAD_PROOF_ID" "$WITHDRAW_ID_BAD_PROOF" "${NULLIFIER}-bad")
-write_proof_bundle "$PROOF_BAD_FILE" "$OLD_STATE_ROOT" "0xtamperedONCHAIN12${RUN_ID}" "0xdepositsRoot" "0xwithdrawalsRoot" "0xnullifiersRoot" "0xwithdrawOutputsRoot"
+write_proof_bundle "$PROOF_BAD_FILE" "$OLD_STATE_ROOT" "$ROOT_TAMPERED_PROOF" "$DEPOSITS_ROOT" "$WITHDRAWALS_ROOT" "$NULLIFIERS_ROOT" "$WITHDRAW_OUTPUTS_ROOT"
 
 echo -e "\n${YELLOW}[BƯỚC 3]${NC} Failure vector 1: invalid proof/publicInputs mismatch phải bị reject..."
 submit_expect_rejected "Invalid proof bundle" "publicInputs do not match" \
@@ -379,7 +390,7 @@ if ! DEPOSIT_VALID_ID=$(create_deposit "Valid"); then
     exit 1
 fi
 SETTLEMENT_VALID=$(make_settlement_update "$BATCH_ID_VALID" "$OLD_STATE_ROOT" "$ROOT_VALID" "$DEPOSIT_VALID_ID" "$WITHDRAW_ID_VALID" "$NULLIFIER")
-write_proof_bundle "$PROOF_VALID_FILE" "$OLD_STATE_ROOT" "$ROOT_VALID" "0xdepositsRoot" "0xwithdrawalsRoot" "0xnullifiersRoot" "0xwithdrawOutputsRoot"
+write_proof_bundle "$PROOF_VALID_FILE" "$OLD_STATE_ROOT" "$ROOT_VALID" "$DEPOSITS_ROOT" "$WITHDRAWALS_ROOT" "$NULLIFIERS_ROOT" "$WITHDRAW_OUTPUTS_ROOT"
 
 if ! VALID_TXHASH=$(submit_tx_json "Valid SubmitBatchProof" \
   "$BINARY" tx zkdex submit-batch-proof \
@@ -419,7 +430,7 @@ fi
 
 # Xài lại nullifier cũ
 SETTLEMENT_DUP=$(make_settlement_update "$BATCH_ID_DUP_NULLIFIER" "$ROOT_VALID" "$ROOT_DUP_NULLIFIER" "$DEPOSIT_DUP_ID" "$WITHDRAW_ID_DUP_NULLIFIER" "$NULLIFIER")
-write_proof_bundle "$PROOF_DUP_FILE" "$ROOT_VALID" "$ROOT_DUP_NULLIFIER" "0xdepositsRoot" "0xwithdrawalsRoot" "0xnullifiersRoot" "0xwithdrawOutputsRoot"
+write_proof_bundle "$PROOF_DUP_FILE" "$ROOT_VALID" "$ROOT_DUP_NULLIFIER" "$DEPOSITS_ROOT" "$WITHDRAWALS_ROOT" "$NULLIFIERS_ROOT" "$WITHDRAW_OUTPUTS_ROOT"
 
 submit_expect_rejected "Duplicate nullifier" "already used" \
   "$BINARY" tx zkdex submit-batch-proof \

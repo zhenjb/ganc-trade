@@ -1,8 +1,8 @@
 {
   "settlementUpdate": {
     "batchId": "batch-1",
-    "oldStateRoot": "0xrootA",
-    "newStateRoot": "0xrootB",
+    "oldStateRoot": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "newStateRoot": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "deposits": [
       {
         "depositId": "dep-1",
@@ -24,20 +24,24 @@
     ]
   },
   "batchCommitments": {
-    "depositsRoot": "0xdepositsRoot",
-    "withdrawalsRoot": "0xwithdrawalsRoot",
-    "nullifiersRoot": "0xnullifiersRoot",
-    "withdrawOutputsRoot": "0xwithdrawOutputsRoot"
+    "depositsRoot": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "withdrawalsRoot": "0x2222222222222222222222222222222222222222222222222222222222222222",
+    "nullifiersRoot": "0x3333333333333333333333333333333333333333333333333333333333333333",
+    "withdrawOutputsRoot": "0x4444444444444444444444444444444444444444444444444444444444444444",
+    "tradesRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "ordersRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
   },
   "proofBundle": {
     "proof": "0xmockproof",
     "publicInputs": [
-      "0xrootA",
-      "0xrootB",
-      "0xdepositsRoot",
-      "0xwithdrawalsRoot",
-      "0xnullifiersRoot",
-      "0xwithdrawOutputsRoot"
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "0x1111111111111111111111111111111111111111111111111111111111111111",
+      "0x2222222222222222222222222222222222222222222222222222222222222222",
+      "0x3333333333333333333333333333333333333333333333333333333333333333",
+      "0x4444444444444444444444444444444444444444444444444444444444444444",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x0000000000000000000000000000000000000000000000000000000000000000"
     ],
     "verificationKeyId": "v1"
   }

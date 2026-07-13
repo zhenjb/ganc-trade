@@ -16,7 +16,7 @@ func TestSettlementUpdateRoundTripWithTrade(t *testing.T) {
 		OldStateRoot:         "0x" + strings.Repeat("c", 64),
 		NewStateRoot:         "0x" + strings.Repeat("d", 64),
 		Trades:               []*types.Trade{agreementTrade()},
-		TradeBatchCommitment: []byte("TRD-ATOM-USDT-batch-9"),
+		TradeBatchCommitment: []byte("TRD-ATOM-USDC-batch-9"),
 	}
 
 	bz, err := proto.Marshal(&update)
@@ -117,7 +117,7 @@ func TestTradeValidateBasicRejectsInvalidFields(t *testing.T) {
 func agreementTrade() *types.Trade {
 	return &types.Trade{
 		TradeId:        "trd-1",
-		Market:         "ATOM/USDT",
+		Market:         "ATOM/USDC",
 		MakerOrderId:   "ord-077",
 		TakerOrderId:   "ord-101",
 		OrderHash:      "0x" + strings.Repeat("a", 64),

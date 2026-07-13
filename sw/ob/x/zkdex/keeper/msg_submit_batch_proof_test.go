@@ -146,7 +146,7 @@ func TestMsgSubmitBatchProofAcceptsTradeOnlyBatch(t *testing.T) {
 	require.Equal(t, expectedPublicInputs, resp.PublicInputs)
 	logPublicInputs(t, "accepted trade-only batch public inputs", resp.PublicInputs)
 	require.Contains(t, string(gotVerifierUpdate), `"tradeId":"trd-1"`)
-	require.Contains(t, string(gotVerifierUpdate), `"tradeBatchCommitment":"0x5452442d41544f4d2d555344542d62617463682d39"`)
+	require.Contains(t, string(gotVerifierUpdate), `"tradeBatchCommitment":"0x5452442d41544f4d2d555344432d62617463682d39"`)
 	require.Contains(t, string(gotVerifierUpdate), `"tradesRoot":"`+tradesRoot+`"`)
 	require.Contains(t, string(gotVerifierUpdate), `"ordersRoot":"`+ordersRoot+`"`)
 
@@ -170,7 +170,7 @@ func TestMsgSubmitBatchProofAcceptsTradeOnlyBatch(t *testing.T) {
 	require.Equal(t, emptyPublicInputRootSentinel, batchRecord.WithdrawOutputsRoot)
 	require.Equal(t, tradesRoot, batchRecord.TradesRoot)
 	require.Equal(t, ordersRoot, batchRecord.OrdersRoot)
-	require.Equal(t, "0x5452442d41544f4d2d555344542d62617463682d39", batchRecord.TradeBatchCommitment)
+	require.Equal(t, "0x5452442d41544f4d2d555344432d62617463682d39", batchRecord.TradeBatchCommitment)
 	require.Equal(t, uint64(1), batchRecord.TradeCount)
 	logBatchRecord(t, "accepted trade-only batch record", batchRecord)
 	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, newStateRootD, "1")
@@ -294,7 +294,7 @@ func TestMsgSubmitBatchProofAcceptsMixedDepositWithdrawTradeBatch(t *testing.T) 
 	require.Equal(t, withdrawOutputsRoot, batchRecord.WithdrawOutputsRoot)
 	require.Equal(t, tradesRoot, batchRecord.TradesRoot)
 	require.Equal(t, ordersRoot, batchRecord.OrdersRoot)
-	require.Equal(t, "0x5452442d4d495845442d41544f4d2d555344542d62617463682d31", batchRecord.TradeBatchCommitment)
+	require.Equal(t, "0x5452442d4d495845442d41544f4d2d555344432d62617463682d31", batchRecord.TradeBatchCommitment)
 	require.Equal(t, uint64(1), batchRecord.TradeCount)
 	logBatchRecord(t, "accepted mixed batch record", batchRecord)
 	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, newStateRootB, "1")
@@ -598,7 +598,7 @@ func validTradeOnlyMsgSubmitBatchProof(t *testing.T, f *fixture) (types.Settleme
 		OldStateRoot:         oldStateRootC,
 		NewStateRoot:         newStateRootD,
 		Trades:               []*types.Trade{agreementTrade()},
-		TradeBatchCommitment: []byte("TRD-ATOM-USDT-batch-9"),
+		TradeBatchCommitment: []byte("TRD-ATOM-USDC-batch-9"),
 	}
 	batchCommitments := types.BatchCommitments{
 		DepositsRoot:        emptyPublicInputRootSentinel,
@@ -627,7 +627,7 @@ func validMixedMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUp
 
 	settlementUpdate, batchCommitments, _ := validMsgSubmitBatchProof(t, f)
 	settlementUpdate.Trades = []*types.Trade{agreementTrade()}
-	settlementUpdate.TradeBatchCommitment = []byte("TRD-MIXED-ATOM-USDT-batch-1")
+	settlementUpdate.TradeBatchCommitment = []byte("TRD-MIXED-ATOM-USDC-batch-1")
 	batchCommitments.TradesRoot = tradesRoot
 	batchCommitments.OrdersRoot = ordersRoot
 	proofBundle := proofBundleJSON(t, []string{
@@ -1014,7 +1014,7 @@ func requireMixedBatchRejectInvariant(t *testing.T, title string, f *fixture, se
 func agreementTrade() *types.Trade {
 	return &types.Trade{
 		TradeId:        "trd-1",
-		Market:         "ATOM/USDT",
+		Market:         "ATOM/USDC",
 		MakerOrderId:   "ord-077",
 		TakerOrderId:   "ord-101",
 		OrderHash:      "0x" + strings.Repeat("a", 64),
