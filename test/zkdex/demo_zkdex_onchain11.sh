@@ -22,11 +22,19 @@ FRONTEND_CLAIM_OUTPUT_FILE="${FRONTEND_CLAIM_OUTPUT_FILE:-}"
 STOP_BEFORE_CLAIM="${STOP_BEFORE_CLAIM:-0}"
 
 RUN_ID="$(date +%s)"
+make_root() {
+    printf '0x%064x' "$1"
+}
+DEPOSITS_ROOT="0x1111111111111111111111111111111111111111111111111111111111111111"
+WITHDRAWALS_ROOT="0x2222222222222222222222222222222222222222222222222222222222222222"
+NULLIFIERS_ROOT="0x3333333333333333333333333333333333333333333333333333333333333333"
+WITHDRAW_OUTPUTS_ROOT="0x4444444444444444444444444444444444444444444444444444444444444444"
+EMPTY_ROOT="0x0000000000000000000000000000000000000000000000000000000000000000"
 BATCH_ID="batch-onchain11-${RUN_ID}"
 WITHDRAW_ID="wd-onchain11-${RUN_ID}"
 NULLIFIER="0xmocknullifierONCHAIN11${RUN_ID}"
 DESTINATION_HASH="0xmockdestinationhashONCHAIN11${RUN_ID}"
-NEW_STATE_ROOT="0xrootONCHAIN11${RUN_ID}"
+NEW_STATE_ROOT="$(make_root $((RUN_ID + 11)))"
 PROOF_BUNDLE_FILE="proof_bundle_onchain11_${RUN_ID}.json"
 
 cleanup() {
@@ -251,17 +259,19 @@ cat << EOF > "$PROOF_BUNDLE_FILE"
   "publicInputs": [
     "${OLD_STATE_ROOT}",
     "${NEW_STATE_ROOT}",
-    "0xdepositsRoot",
-    "0xwithdrawalsRoot",
-    "0xnullifiersRoot",
-    "0xwithdrawOutputsRoot"
+    "${DEPOSITS_ROOT}",
+    "${WITHDRAWALS_ROOT}",
+    "${NULLIFIERS_ROOT}",
+    "${WITHDRAW_OUTPUTS_ROOT}",
+    "${EMPTY_ROOT}",
+    "${EMPTY_ROOT}"
   ],
   "verificationKeyId": "v1"
 }
 EOF
 
 SETTLEMENT_UPDATE="{\"batchId\":\"${BATCH_ID}\",\"oldStateRoot\":\"${OLD_STATE_ROOT}\",\"newStateRoot\":\"${NEW_STATE_ROOT}\",\"deposits\":[{\"depositId\":\"${DEPOSIT_ID}\",\"owner\":\"${SIGNER_ADDR}\",\"denom\":\"${ASSET_DENOM}\",\"amount\":\"${DEPOSIT_AMOUNT}\"}],\"withdrawals\":[{\"withdrawId\":\"${WITHDRAW_ID}\",\"owner\":\"${SIGNER_ADDR}\",\"denom\":\"${ASSET_DENOM}\",\"amount\":\"${WITHDRAW_AMOUNT}\",\"destination\":\"${SIGNER_ADDR}\",\"destinationHash\":\"${DESTINATION_HASH}\",\"nullifier\":\"${NULLIFIER}\"}]}"
-BATCH_COMMITMENTS='{"depositsRoot":"0xdepositsRoot","withdrawalsRoot":"0xwithdrawalsRoot","nullifiersRoot":"0xnullifiersRoot","withdrawOutputsRoot":"0xwithdrawOutputsRoot"}'
+BATCH_COMMITMENTS="{\"depositsRoot\":\"${DEPOSITS_ROOT}\",\"withdrawalsRoot\":\"${WITHDRAWALS_ROOT}\",\"nullifiersRoot\":\"${NULLIFIERS_ROOT}\",\"withdrawOutputsRoot\":\"${WITHDRAW_OUTPUTS_ROOT}\",\"tradesRoot\":\"${EMPTY_ROOT}\",\"ordersRoot\":\"${EMPTY_ROOT}\"}"
 
 if ! SUBMIT_TXHASH=$(submit_tx_json "SubmitBatchProof" \
   "$BINARY" tx zkdex submit-batch-proof \

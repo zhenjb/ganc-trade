@@ -76,8 +76,8 @@
     "submitBatchProofTxHash": "FDAB136A4C42AA666C3E29AA0E2709D6A4EE0148877DED79214AFC24A039D396",
     "settlementSummary": {
       "batchId": "batch-onchain11-1782531436",
-      "oldStateRoot": "0xrootONCHAIN111782531156",
-      "newStateRoot": "0xrootONCHAIN111782531436",
+      "oldStateRoot": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "newStateRoot": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "depositId": "dep-cosmos1jwrwflqs3ppuaxc2kagcyl7tvmpf75e0pw8vef-352-74fc0a9c",
       "depositAmount": "100",
       "withdrawId": "wd-onchain11-1782531436",
