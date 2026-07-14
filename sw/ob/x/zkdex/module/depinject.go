@@ -57,7 +57,7 @@ func ProvideModule(in ModuleInputs) ModuleOutputs {
 		authority,
 		in.BankKeeper,
 		in.AuthKeeper,
-		types.StubProofVerifier{Accept: true},
+		types.DefaultProofVerifier(),
 	)
 	m := NewAppModule(in.Cdc, k, in.AuthKeeper, in.BankKeeper)
 
