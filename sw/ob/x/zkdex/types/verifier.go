@@ -1,5 +1,7 @@
 package types
 
+const TradeVerifierVKID = "gazk-trade-v1"
+
 // ProofVerifier is the verifier boundary used by on-chain settlement messages.
 // P2 can replace the stub implementation with a real ZK verifier without
 // changing MsgSubmitBatchProof wiring.
@@ -32,4 +34,10 @@ type StubProofVerifier struct {
 
 func (v StubProofVerifier) VerifyProof(update []byte, proofBundle []byte) bool {
 	return v.Accept
+}
+
+func DefaultProofVerifier() ProofVerifier {
+	return NewTradeProofVerifier(map[string]string{
+		TradeVerifierVKID: GazkTradeV1VerifyingKeyHex,
+	})
 }
