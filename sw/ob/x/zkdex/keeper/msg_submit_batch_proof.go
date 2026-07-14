@@ -400,6 +400,8 @@ func (k msgServer) applySettlementUpdate(ctx context.Context, settlementUpdate t
 		sdk.NewAttribute("new_state_root", settlementUpdate.NewStateRoot),
 	))
 	if len(settlementUpdate.Trades) > 0 {
+		tradeCount := len(settlementUpdate.Trades)
+		fillCount := countSettlementFills(settlementUpdate.Trades)
 		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 			"TradeSettled",
 			sdk.NewAttribute("batchId", settlementUpdate.BatchId),
@@ -408,12 +410,35 @@ func (k msgServer) applySettlementUpdate(ctx context.Context, settlementUpdate t
 			sdk.NewAttribute("trades_root", publicInputs[6]),
 			sdk.NewAttribute("newStateRoot", settlementUpdate.NewStateRoot),
 			sdk.NewAttribute("new_state_root", settlementUpdate.NewStateRoot),
-			sdk.NewAttribute("fillCount", strconv.Itoa(len(settlementUpdate.Trades))),
-			sdk.NewAttribute("fill_count", strconv.Itoa(len(settlementUpdate.Trades))),
-			sdk.NewAttribute("trade_count", strconv.Itoa(len(settlementUpdate.Trades))),
+			sdk.NewAttribute("fillCount", strconv.Itoa(fillCount)),
+			sdk.NewAttribute("fill_count", strconv.Itoa(fillCount)),
+			sdk.NewAttribute("trade_count", strconv.Itoa(tradeCount)),
+			sdk.NewAttribute("trade_record_count", strconv.Itoa(tradeCount)),
 		))
 	}
 	return nil
+}
+
+func countSettlementFills(trades []*types.Trade) int {
+	fillIDs := make(map[string]struct{}, len(trades))
+	for _, trade := range trades {
+		if trade == nil {
+			continue
+		}
+		fillIDs[settlementFillID(trade.TradeId)] = struct{}{}
+	}
+	return len(fillIDs)
+}
+
+func settlementFillID(tradeID string) string {
+	switch {
+	case strings.HasSuffix(tradeID, "-buy"):
+		return strings.TrimSuffix(tradeID, "-buy")
+	case strings.HasSuffix(tradeID, "-sell"):
+		return strings.TrimSuffix(tradeID, "-sell")
+	default:
+		return tradeID
+	}
 }
 
 // check public input mà proof dùng = public input của chain

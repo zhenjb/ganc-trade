@@ -173,7 +173,7 @@ func TestMsgSubmitBatchProofAcceptsTradeOnlyBatch(t *testing.T) {
 	require.Equal(t, "0x5452442d41544f4d2d555344432d62617463682d39", batchRecord.TradeBatchCommitment)
 	require.Equal(t, uint64(1), batchRecord.TradeCount)
 	logBatchRecord(t, "accepted trade-only batch record", batchRecord)
-	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, newStateRootD, "1")
+	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, newStateRootD, "1", "1")
 }
 
 func TestMsgSubmitBatchProofONCHAINT05ApplyTradeUpdateDoD(t *testing.T) {
@@ -212,7 +212,7 @@ func TestMsgSubmitBatchProofONCHAINT05ApplyTradeUpdateDoD(t *testing.T) {
 	logOrderNullifiersUsed(t, "ONCHAIN-T05 after apply orderNullifiers", f, settlementUpdate.Trades)
 
 	// ONCHAIN-T05 DoD: event TradeSettled xuất hiện trong ctx.EventManager với đúng attribute.
-	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, settlementUpdate.NewStateRoot, "1")
+	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, settlementUpdate.NewStateRoot, "1", "1")
 
 	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, settlementUpdate.BatchId)
 	require.NoError(t, err)
@@ -222,6 +222,43 @@ func TestMsgSubmitBatchProofONCHAINT05ApplyTradeUpdateDoD(t *testing.T) {
 	require.Equal(t, uint64(len(settlementUpdate.Trades)), batchRecord.TradeCount)
 	logSubmitBatchProofState(t, "ONCHAIN-T05 applied trade update state", f, settlementUpdate, resp.PublicInputs)
 	logBatchRecord(t, "ONCHAIN-T05 applied trade update batch record", batchRecord)
+}
+
+func TestMsgSubmitBatchProofTRDB2AcceptsTwoTradesPerFill(t *testing.T) {
+	f := initFixture(t)
+	settlementUpdate, batchCommitments, proofBundle := validTwoPerFillTradeOnlyMsgSubmitBatchProof(t, f)
+	msgServer := keeper.NewMsgServerImpl(f.keeper.WithProofVerifier(types.StubProofVerifier{Accept: true}))
+
+	resp, err := msgServer.SubmitBatchProof(f.ctx, &types.MsgSubmitBatchProof{
+		Creator:          sample.AccAddress(),
+		SettlementUpdate: settlementUpdate,
+		BatchCommitments: batchCommitments,
+		ProofBundle:      proofBundle,
+	})
+	require.NoError(t, err)
+	require.True(t, resp.Accepted)
+	require.Equal(t, tradePublicInputs(settlementUpdate, batchCommitments), resp.PublicInputs)
+
+	for _, trade := range settlementUpdate.Trades {
+		used, err := f.keeper.IsOrderNullifierUsed(f.ctx, trade.OrderNullifier)
+		require.NoError(t, err)
+		require.True(t, used, "order nullifier should be marked used for %s", trade.TradeId)
+	}
+	require.NotEqual(t, settlementUpdate.Trades[0].OrderNullifier, settlementUpdate.Trades[1].OrderNullifier)
+
+	stateRoot, err := f.keeper.GetStateRoot(f.ctx)
+	require.NoError(t, err)
+	require.Equal(t, settlementUpdate.NewStateRoot, stateRoot)
+
+	batchRecord, err := f.keeper.GetBatchRecord(f.ctx, settlementUpdate.BatchId)
+	require.NoError(t, err)
+	require.Equal(t, []string{"fill-1-buy", "fill-1-sell"}, batchRecord.TradeIds)
+	require.Equal(t, tradesRoot, batchRecord.TradesRoot)
+	require.Equal(t, ordersRoot, batchRecord.OrdersRoot)
+	require.Equal(t, uint64(2), batchRecord.TradeCount)
+	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, settlementUpdate.NewStateRoot, "1", "2")
+	logSubmitBatchProofState(t, "TRD-B2 accepted two-per-fill trade state", f, settlementUpdate, resp.PublicInputs)
+	logBatchRecord(t, "TRD-B2 accepted two-per-fill batch record", batchRecord)
 }
 
 func TestMsgSubmitBatchProofAcceptsMixedDepositWithdrawTradeBatch(t *testing.T) {
@@ -297,7 +334,7 @@ func TestMsgSubmitBatchProofAcceptsMixedDepositWithdrawTradeBatch(t *testing.T) 
 	require.Equal(t, "0x5452442d4d495845442d41544f4d2d555344432d62617463682d31", batchRecord.TradeBatchCommitment)
 	require.Equal(t, uint64(1), batchRecord.TradeCount)
 	logBatchRecord(t, "accepted mixed batch record", batchRecord)
-	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, newStateRootB, "1")
+	requireTradeSettledEvent(t, f, settlementUpdate.BatchId, tradesRoot, newStateRootB, "1", "1")
 }
 
 func TestMsgSubmitBatchProofRejectsReusedOrderNullifierBeforeVerify(t *testing.T) {
@@ -622,6 +659,33 @@ func validTradeOnlyMsgSubmitBatchProof(t *testing.T, f *fixture) (types.Settleme
 	return settlementUpdate, batchCommitments, proofBundle
 }
 
+func validTwoPerFillTradeOnlyMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate, types.BatchCommitments, []byte) {
+	t.Helper()
+
+	settlementUpdate, batchCommitments, _ := validTradeOnlyMsgSubmitBatchProof(t, f)
+	buyTrade := *agreementTrade()
+	buyTrade.TradeId = "fill-1-buy"
+	buyTrade.OrderHash = "0x" + strings.Repeat("a", 64)
+	buyTrade.OrderNullifier = "0x" + strings.Repeat("b", 64)
+	buyTrade.Owner = "cosmos1alice"
+	buyTrade.Denom = "uusdc"
+	buyTrade.Side = "buy"
+
+	sellTrade := *agreementTrade()
+	sellTrade.TradeId = "fill-1-sell"
+	sellTrade.OrderHash = "0x" + strings.Repeat("c", 64)
+	sellTrade.OrderNullifier = "0x" + strings.Repeat("d", 64)
+	sellTrade.Owner = "cosmos1bob"
+	sellTrade.Denom = "uatom"
+	sellTrade.Side = "sell"
+
+	settlementUpdate.Trades = []*types.Trade{&buyTrade, &sellTrade}
+	settlementUpdate.TradeBatchCommitment = []byte("TRD-ATOM-USDC-two-per-fill-batch-9")
+	proofBundle := proofBundleJSON(t, tradePublicInputs(settlementUpdate, batchCommitments))
+
+	return settlementUpdate, batchCommitments, proofBundle
+}
+
 func validMixedMsgSubmitBatchProof(t *testing.T, f *fixture) (types.SettlementUpdate, types.BatchCommitments, []byte) {
 	t.Helper()
 
@@ -798,7 +862,7 @@ func logOrderNullifiersUsed(t *testing.T, title string, f *fixture, trades []*ty
 	t.Logf("%s:\n%s", title, bz)
 }
 
-func requireTradeSettledEvent(t *testing.T, f *fixture, batchID, expectedTradesRoot, expectedNewStateRoot, expectedFillCount string) {
+func requireTradeSettledEvent(t *testing.T, f *fixture, batchID, expectedTradesRoot, expectedNewStateRoot, expectedFillCount, expectedTradeCount string) {
 	t.Helper()
 
 	sdkCtx := sdk.UnwrapSDKContext(f.ctx)
@@ -828,10 +892,11 @@ func requireTradeSettledEvent(t *testing.T, f *fixture, batchID, expectedTradesR
 		require.Equal(t, expectedNewStateRoot, attrs["new_state_root"])
 		require.Equal(t, expectedFillCount, attrs["fillCount"])
 		require.Equal(t, expectedFillCount, attrs["fill_count"])
-		require.Equal(t, expectedFillCount, attrs["trade_count"])
+		require.Equal(t, expectedTradeCount, attrs["trade_count"])
+		require.Equal(t, expectedTradeCount, attrs["trade_record_count"])
 		return
 	}
-	require.Failf(t, "missing TradeSettled event", "batchID=%s tradesRoot=%s newStateRoot=%s fillCount=%s", batchID, expectedTradesRoot, expectedNewStateRoot, expectedFillCount)
+	require.Failf(t, "missing TradeSettled event", "batchID=%s tradesRoot=%s newStateRoot=%s fillCount=%s tradeCount=%s", batchID, expectedTradesRoot, expectedNewStateRoot, expectedFillCount, expectedTradeCount)
 }
 
 func logSubmitBatchProofState(t *testing.T, title string, f *fixture, settlementUpdate types.SettlementUpdate, publicInputs []string) {
