@@ -52,8 +52,14 @@ KEYRING="${KEYRING:-test}"
 
 SELLER="${SELLER:-bob}"          # đặt các lệnh SELL (maker) — cần BASE_DENOM
 BUYER="${BUYER:-alice}"          # đặt các lệnh BUY  (taker) — cần QUOTE_DENOM
-BASE_DENOM="${BASE_DENOM:-ATOM}"
-QUOTE_DENOM="${QUOTE_DENOM:-USDT}"
+# Denom PHẢI là denom chain thực sự phát cho alice/bob (kiểm bằng
+# `obd q bank balances <addr>`). Trước đây mặc định ATOM/USDT — những đồng KHÔNG
+# tồn tại trên chain này (chain phát uatom/uosmo/uusdc) ⇒ mọi place-order fail ở
+# DeliverTx (tx vẫn vào block và vẫn TIÊU sequence ⇒ trông như lỗi "sequence
+# mismatch", nhưng gốc là denom).
+BASE_DENOM="${BASE_DENOM:-uatom}"
+QUOTE_DENOM="${QUOTE_DENOM:-uusdc}"
+# marketId do keeper sinh: BaseDenom + "-" + QuoteDenom (msg_server_register_pairs.go)
 MARKET="${BASE_DENOM}-${QUOTE_DENOM}"
 QTY="${QTY:-1}"
 BASE_PRICE="${BASE_PRICE:-100}"  # giá SELL chạy BASE_PRICE .. BASE_PRICE+n-1
@@ -159,6 +165,42 @@ place(){
   echo "$resp" | jq -r '.txhash // empty'
 }
 
+# Đặt 1 lệnh RỒI CHỜ COMMIT. In "<code> <gas_used> <height>" (như wait_tx).
+#
+# BẮT BUỘC tuần tự — Phase 1 có HAI ràng buộc khiến bắn song song luôn hỏng:
+#   (1) SDK v0.50+ kiểm sequence ở CheckTx dựa trên state ĐÃ COMMIT, nên mỗi
+#       account chỉ an toàn 1 tx / block.
+#   (2) orderId = fmt.Sprintf("%s-%d-%s", marketId, blockHeight, Creator[:6])
+#       mà Creator[:6] == "cosmos" với MỌI địa chỉ bech32 ⇒ hai lệnh cùng market
+#       trong cùng block có CÙNG orderId và ĐÈ nhau (msg_server_place_order.go +
+#       matching.go:138 k.Order.Set). Nhiều tài khoản cũng không cứu được.
+# ⇒ Trần nạp lệnh của Phase 1 là 1 lệnh / market / block. Đó vừa là ràng buộc
+#   vận hành, vừa là MỘT KẾT QUẢ ĐO đáng ghi lại khi so với Phase 2.
+#
+# Sequence: resync từ chính thông báo lỗi ("expected N") — chuẩn hơn
+# `q auth account` (giá trị đó trễ khi còn tx trong mempool). Lưu ý tx FAIL vẫn
+# tiêu sequence, nên không được tự tăng bộ đếm khi thất bại.
+place_wait(){
+  local from="$1" side="$2" price="$3" seq resp code hash exp attempt
+  seq=$(get_seq "$(addr_of "$from")")
+  for attempt in 1 2 3; do
+    resp=$("$OBD" tx dex place-order "$MARKET" "$side" "$price" "$QTY" \
+            --from "$from" --sequence "$seq" $TXFLAGS 2>/dev/null)
+    code=$(echo "$resp" | jq -r '.code // 999' 2>/dev/null)
+    if [ "$code" = "0" ]; then
+      hash=$(echo "$resp" | jq -r '.txhash // empty')
+      wait_tx "$hash"          # in "<code> <gas_used> <height>"
+      return
+    fi
+    exp=$(echo "$resp" | jq -r '.raw_log // ""' | grep -oE 'expected [0-9]+' | head -1 | awk '{print $2}')
+    if [ -n "$exp" ]; then seq="$exp"; continue; fi   # lệch sequence → dùng số chain yêu cầu
+    warn "CheckTx từ chối (from=$from side=$side price=$price code=$code): $(echo "$resp" | jq -r '.raw_log // "?"' | head -c 160)"
+    echo "-1 0 0"; return 1
+  done
+  warn "hết lượt resync sequence (from=$from side=$side price=$price)"
+  echo "-1 0 0"; return 1
+}
+
 # ----------------------------- RAM sampler ---------------------------------
 RAM_PID=""
 start_ram(){
@@ -203,71 +245,61 @@ run_scale(){
 
   register_market
 
-  local saddr baddr sseq baseq
+  local saddr baddr   # sseq/baseq không còn cần: place_wait tự quản sequence
   saddr=$(addr_of "$SELLER"); baddr=$(addr_of "$BUYER")
   [ -n "$saddr" ] && [ -n "$baddr" ] || die "Không lấy được địa chỉ $SELLER/$BUYER (keyring=$KEYRING)."
 
-  # --- SEED: n lệnh SELL giá phân biệt, chưa có BUY nên tất cả nằm im trong sổ
-  info "Seed $n lệnh SELL (giá $BASE_PRICE..$((BASE_PRICE+n-1)))…"
-  sseq=$(get_seq "$saddr")
-  local -a seed_hashes=()
-  local i price h
+  # --- SEED: n lệnh SELL giá phân biệt, chưa có BUY nên tất cả nằm im trong sổ.
+  # TUẦN TỰ, chờ commit từng lệnh: Phase 1 chỉ nhận 1 lệnh / market / block
+  # (sequence + orderId đụng — xem chú thích ở place_wait). Bắn song song thì
+  # phần lớn lệnh sẽ bị từ chối hoặc ĐÈ nhau, depth không bao giờ đạt n.
+  info "Seed $n lệnh SELL (giá $BASE_PRICE..$((BASE_PRICE+n-1)))… (tuần tự, ~1 block/lệnh)"
+  local depth=0
+  local i price code gas hgt
   for ((i=0;i<n;i++)); do
     price=$((BASE_PRICE+i))
-    h=$(place "$SELLER" "$sseq" SELL "$price")
-    if [ -z "$h" ]; then                      # sequence lệch → đồng bộ lại rồi thử lại 1 lần
-      sseq=$(get_seq "$saddr"); h=$(place "$SELLER" "$sseq" SELL "$price")
+    read -r code gas hgt < <(place_wait "$SELLER" SELL "$price")
+    if [ "$code" = "0" ]; then
+      depth=$((depth+1))
+    else
+      warn "seed lệnh giá $price thất bại (code=$code)"
     fi
-    [ -n "$h" ] && seed_hashes+=("$h")
-    sseq=$((sseq+1))
-    (( i % 50 == 0 )) && info "  …đã gửi $i/$n"
-  done
-
-  info "Chờ seed commit & đếm độ sâu thực tế…"
-  local depth=0
-  for h in "${seed_hashes[@]}"; do
-    read -r code _ _ < <(wait_tx "$h"); [ "$code" = "0" ] && depth=$((depth+1))
+    (( i % 10 == 0 )) && info "  …đã seed $((i+1))/$n (depth=$depth)"
   done
   ok "Độ sâu sổ đạt được: depth=$depth (mục tiêu n=$n)"
   [ "$depth" -ge 1 ] || die "Seed thất bại, depth=0. Xem $LOGDIR/chain.log"
 
   # --- A1b ⭐: 1 lệnh SELL nữa ở giá cao, KHÔNG có BUY → không khớp, chỉ quét sổ
   info "A1b: đo gas lệnh KHÔNG khớp ở depth≈$depth…"
-  local hb gas_nomatch=0 hgt_b=0
-  hb=$(place "$SELLER" "$sseq" SELL "$((BASE_PRICE+n+5))"); sseq=$((sseq+1))
-  read -r code gas_nomatch hgt_b < <(wait_tx "$hb")
+  local gas_nomatch=0 hgt_b=0
+  read -r code gas_nomatch hgt_b < <(place_wait "$SELLER" SELL "$((BASE_PRICE+n+5))")
   [ "$code" = "0" ] || warn "A1b tx code=$code (gas có thể không tin cậy)"
   ok "A1b gas lệnh-không-khớp = $gas_nomatch"
 
   # --- A1a: 1 lệnh BUY khớp lệnh SELL rẻ nhất → 1 trade. gas/trade = sell + buy
   info "A1a: đo gas 1 trade (BUY khớp) ở depth≈$depth…"
-  baseq=$(get_seq "$baddr")
-  local hbuy gas_buy=0 hgt_a=0
-  hbuy=$(place "$BUYER" "$baseq" BUY "$((BASE_PRICE+n+5))"); baseq=$((baseq+1))
-  read -r code gas_buy hgt_a < <(wait_tx "$hbuy")
+  local gas_buy=0 hgt_a=0
+  read -r code gas_buy hgt_a < <(place_wait "$BUYER" BUY "$((BASE_PRICE+n+5))")
   [ "$code" = "0" ] || warn "A1a BUY tx code=$code"
   local gas_trade=$((gas_nomatch + gas_buy))
   ok "A1a gas(SELL)=$gas_nomatch + gas(BUY)=$gas_buy = gas/trade=$gas_trade"
 
-  # --- A3: throughput — bắn K lệnh BUY khớp thật nhanh, đo N ÷ Δt
+  # --- A3: throughput = K lệnh BUY khớp ÷ Δt.
+  # KHÔNG bắn song song: trần thật của Phase 1 là 1 lệnh/market/block, nên bắn
+  # song song chỉ tạo ra tx bị từ chối và một con số THẤP GIẢ TẠO. Đo tuần tự
+  # cho ra đúng năng lực trần: throughput ≈ 1 / block-time.
   local K="${THROUGHPUT_K:-$depth}"
   [ "$K" -gt "$depth" ] && K="$depth"
-  info "A3: bắn $K lệnh BUY khớp để đo throughput…"
-  baseq=$(get_seq "$baddr")
-  local -a thr_hashes=()
+  info "A3: $K lệnh BUY khớp, tuần tự (trần cấu trúc: 1 lệnh/market/block)…"
+  local committed=0 hmax=0
   local t0 t1
   t0=$(date +%s.%N)
   for ((i=0;i<K;i++)); do
-    h=$(place "$BUYER" "$baseq" BUY "$((BASE_PRICE+n+5))")
-    if [ -z "$h" ]; then baseq=$(get_seq "$baddr"); h=$(place "$BUYER" "$baseq" BUY "$((BASE_PRICE+n+5))"); fi
-    [ -n "$h" ] && thr_hashes+=("$h")
-    baseq=$((baseq+1))
-  done
-  # chờ TẤT CẢ commit; ghi lại block cao nhất
-  local committed=0 hmax=0
-  for h in "${thr_hashes[@]}"; do
-    read -r code _ hh < <(wait_tx "$h")
-    if [ "$code" = "0" ]; then committed=$((committed+1)); [ "${hh:-0}" -gt "$hmax" ] && hmax=$hh; fi
+    read -r code gas hgt < <(place_wait "$BUYER" BUY "$((BASE_PRICE+n+5))")
+    if [ "$code" = "0" ]; then
+      committed=$((committed+1))
+      [ "${hgt:-0}" -gt "$hmax" ] && hmax=$hgt
+    fi
   done
   t1=$(date +%s.%N)
   local dt tput
