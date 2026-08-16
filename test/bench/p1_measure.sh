@@ -293,11 +293,23 @@ run_scale(){
   info "A3: $K lệnh BUY khớp, tuần tự (trần cấu trúc: 1 lệnh/market/block)…"
   local committed=0 hmax=0
   local t0 t1
+  # A2 — ĐỘ TRỄ VÒNG ĐỜI của một lệnh taker, bấm giờ TỪNG lần lặp.
+  # Vòng lặp này vốn đã đo đúng sự kiện cần: sổ ĐÃ có maker chờ sẵn, mỗi vòng
+  # đặt MỘT taker khớp rồi `place_wait` chờ tới lúc tx commit — mà ở Phase 1
+  # commit nghĩa là đặt+khớp+chốt đã xong hết (tất cả trong MỘT tx).
+  # Trước đây chỉ có tổng (A3_seconds÷K = trung bình); ghi lại từng mẫu để có
+  # trung vị/min/max, khớp đúng cách Phase 2 báo cáo (p2_measure.sh §A2) —
+  # hai phía cùng một sự kiện, cùng một loại thống kê.
+  local e2ef="$LOGDIR/e2e_${n}.txt"; : > "$e2ef"
   t0=$(date +%s.%N)
   for ((i=0;i<K;i++)); do
+    local ta tb
+    ta=$(date +%s%3N)
     read -r code gas hgt < <(place_wait "$BUYER" BUY "$((BASE_PRICE+n+5))")
+    tb=$(date +%s%3N)
     if [ "$code" = "0" ]; then
       committed=$((committed+1))
+      echo "$((tb-ta))" >> "$e2ef"
       [ "${hgt:-0}" -gt "$hmax" ] && hmax=$hgt
     fi
   done
@@ -307,13 +319,22 @@ run_scale(){
   tput=$(awk -v k="$committed" -v d="$dt" 'BEGIN{ if(d>0) printf "%.3f", k/d; else print "NA"}')
   ok "A3 throughput = $committed trade / ${dt}s = ${tput} trade/s (block cuối=$hmax)"
 
+  local e2e_med=NA e2e_min=NA e2e_max=NA ec
+  ec=$(wc -l < "$e2ef" 2>/dev/null || echo 0)
+  if [ "${ec:-0}" -ge 1 ]; then
+    sort -n "$e2ef" -o "$e2ef"
+    e2e_med=$(awk -v c="$ec" 'NR==int((c+1)/2){print $1}' "$e2ef")
+    e2e_min=$(head -1 "$e2ef"); e2e_max=$(tail -1 "$e2ef")
+  fi
+  ok "A2 vòng đời taker→on-chain: trung vị=${e2e_med}ms · min=${e2e_min}ms · max=${e2e_max}ms (${ec} mẫu)"
+
   # --- A4: RAM đỉnh
   stop_ram
   local ram_kb; ram_kb=$(cat "$ramfile" 2>/dev/null || echo 0)
   local ram_mb; ram_mb=$(awk -v k="$ram_kb" 'BEGIN{printf "%.1f", k/1024}')
   ok "A4 RAM peak (obd) = ${ram_mb} MB"
 
-  echo "$n,$depth,$gas_nomatch,$gas_buy,$gas_trade,$committed,$dt,$tput,$ram_kb,$ram_mb" >>"$CSV"
+  echo "$n,$depth,$gas_nomatch,$gas_buy,$gas_trade,$committed,$dt,$tput,$ram_kb,$ram_mb,$e2e_med,$e2e_min,$e2e_max" >>"$CSV"
 
   [ "$MANAGE_CHAIN" = "1" ] && stop_chain
 }
@@ -321,7 +342,7 @@ run_scale(){
 # ----------------------------- Main ----------------------------------------
 echo -e "${C_C}P1 measurement — market=$MARKET seller=$SELLER buyer=$BUYER gas=$GASLIM${C_N}"
 echo -e "${C_C}Hệ: $SCALES | MANAGE_CHAIN=$MANAGE_CHAIN | node=$NODE${C_N}"
-echo "scale_n,depth,A1b_gas_nomatch,A1a_gas_buy,A1a_gas_per_trade,A3_trades_committed,A3_seconds,A3_trades_per_s,A4_ram_kb,A4_ram_mb" >"$CSV"
+echo "scale_n,depth,A1b_gas_nomatch,A1a_gas_buy,A1a_gas_per_trade,A3_trades_committed,A3_seconds,A3_trades_per_s,A4_ram_kb,A4_ram_mb,A2_e2e_median_ms,A2_e2e_min_ms,A2_e2e_max_ms" >"$CSV"
 
 if [ "$MANAGE_CHAIN" = "0" ]; then
   h=$(rpc_height); [ "${h:-0}" -ge 1 ] 2>/dev/null || die "MANAGE_CHAIN=0 nhưng chain chưa chạy ở $NODE."
